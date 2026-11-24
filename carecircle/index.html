@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0f766e">
+<title>CareCircle (Draft) — Lousynx</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+  <section class="hero">
+    <img src="icon-192.png" width="96" height="96" alt="CareCircle icon">
+    <h1>CareCircle <span class="tag warn">DRAFT</span></h1>
+    <p>Help for everyday life, on request. Seniors post what they need — chatting, shopping, companionship — and a helper nearby accepts. Like a ride-hailing app, but for care and company.</p>
+    <div class="btnrow">
+      <a class="btn" href="app.html">Open the app</a>
+      <button id="install" class="btn ghost" hidden>Install on this device</button>
+      <a class="btn ghost" href="carecircle-draft-source.zip" download>Download source (.zip)</a>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Install on Android</h2>
+    <ol>
+      <li>Tap <b>Open the app</b> in Chrome.</li>
+      <li>Tap <b>⋮ → Install app</b> (or “Add to Home screen”).</li>
+    </ol>
+    <p class="hint">iPhone: Share → Add to Home Screen. This draft is a web app (PWA), not a Play Store APK.</p>
+  </section>
+
+  <section class="card">
+    <h2>What's in the draft</h2>
+    <ul>
+      <li>Big, simple screens with a larger-text button</li>
+      <li>Post a request in a few taps: chat, shopping, companionship, other</li>
+      <li>Helper view to accept requests and check in</li>
+      <li><b>Safety code</b> the senior shares with the helper at the door</li>
+      <li>One-tap call to a family contact and to emergency services</li>
+      <li>Ratings after a visit</li>
+    </ul>
+  </section>
+
+  <section class="card warnbox">
+    <h2>Read before using</h2>
+    <ul>
+      <li>Prototype only. Helpers are simulated, data stays on your device, and no payments exist.</li>
+      <li>Not an emergency, medical or personal-care service. In an emergency, call your local emergency number.</li>
+      <li>A real launch needs a backend, helper identity and background checks, privacy compliance and payments through a licensed provider. See the design notes in the source download (BACKEND.md).</li>
+      <li>Not legal advice. Rules for in-home visits and vulnerable people differ by region.</li>
+    </ul>
+  </section>
+  <p class="hint" style="text-align:center"><a href="../">← Back to lousynx.com</a></p>
+</main>
+<script>
+let d;addEventListener('beforeinstallprompt',e=>{e.preventDefault();d=e;const b=document.getElementById('install');b.hidden=false;b.onclick=async()=>{d.prompt();await d.userChoice;b.hidden=true}});
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+</script>
+</body>
+</html>

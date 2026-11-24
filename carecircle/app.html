@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0f766e">
+<title>CareCircle (Draft)</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="appbody">
+<header class="top">
+  <strong>🤝 CareCircle</strong><span class="tag warn">DRAFT</span>
+  <button id="bigText" class="btn sm ghost" aria-label="Toggle larger text">A+</button>
+  <button id="install" class="btn sm" hidden>Install</button>
+</header>
+<div class="roles" role="group" aria-label="I am a">
+  <button id="roleSenior" aria-pressed="true">I need help</button>
+  <button id="roleHelper" aria-pressed="false">I'm a helper</button>
+</div>
+<main id="view" aria-live="polite"></main>
+<div id="toast" role="status" hidden></div>
+<nav aria-label="Main"></nav>
+<script src="app.js"></script>
+</body>
+</html>
