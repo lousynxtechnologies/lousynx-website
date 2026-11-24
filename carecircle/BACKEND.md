@@ -9,6 +9,17 @@ The prototype stores everything in the browser. A real version needs a backend t
 - **Visit**: request_id, helper_id, safety_code (hashed), check-in/out times, rating.
 - **TrustedContact**: family members who can be notified.
 
+## Accounts, sign-in and profiles
+The prototype keeps accounts in the browser (salted PBKDF2 hashes, in-memory throttling). That is **demo-only**: anyone with access to the device can read or copy the data, there is no email verification, no password recovery and no real rate limiting. A real version:
+- **Identity:** sign up with email or mobile number + one-time code (seniors often prefer a phone number and may need a family member to help set up). Verify before activating. Offer "set up on behalf of a parent" with consent.
+- **Passwords:** if used, hash with Argon2id (or bcrypt/scrypt) on the server with a per-user salt and a pepper kept in a secrets manager; never accept hashes from the client. Consider passkeys (WebAuthn) as the primary login.
+- **Sessions:** short-lived access tokens + rotating refresh tokens in `HttpOnly; Secure; SameSite` cookies; server-side revocation; re-authenticate before sensitive changes (password, phone, deleting the account).
+- **Abuse controls:** per-IP and per-account rate limits, progressive lockout, CAPTCHA/step-up on suspicious activity, email/SMS alerts on new-device login.
+- **Roles and authorisation:** `senior`, `helper`, `family`, `admin`. Enforce on the server (a senior can only read their own requests; a helper only sees fuzzed open requests and, after acceptance, their own visits).
+- **Profile data:** store only what's needed (name, rough area, languages, bio, emergency contact; helpers also services/availability). Keep the emergency contact encrypted, let users export and delete their data, and log who accessed it.
+- **Helper onboarding:** government-ID check, liveness selfie match, background / vulnerable-sector check, references, training; badge shown on the profile only after passing. Re-verify periodically.
+- **Account deletion:** soft-delete then purge on a schedule; keep minimal safety/incident records as required by law.
+
 ## Request lifecycle
 `open → accepted → arrived → done` (or `cancelled`). Check-in (`accepted → arrived`) requires the helper to submit the safety code the senior holds.
 

@@ -55,3 +55,22 @@ nav button{font-size:.7rem}
 .hero h1{margin:.2em 0}
 .btnrow{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:14px}
 .warnbox{border-color:#d97706;background:#fffbeb}
+
+/* accounts & profile */
+.seg{display:flex;gap:6px;margin-bottom:10px}
+.seg button{flex:1;padding:12px;border-radius:12px;border:2px solid var(--brand);background:#fff;color:var(--brand);font:inherit;font-weight:700;cursor:pointer}
+.seg button[aria-selected=true]{background:var(--brand);color:#fff}
+fieldset{border:0;padding:0;margin:8px 0}
+legend{font-weight:700;margin-bottom:6px;padding:0}
+.rolecard{display:block;margin:8px 0}
+.rolecard input{position:absolute;opacity:0;width:1px;height:1px}
+.rolecard span{display:block;border:2px solid var(--line);border-radius:14px;padding:12px;background:#fff;cursor:pointer}
+.rolecard input:checked+span{border-color:var(--brand);background:#ecfdf5}
+.rolecard input:focus-visible+span{outline:3px solid #f59e0b;outline-offset:2px}
+.prof{display:flex;gap:14px;align-items:center}
+.avatar{flex:none;width:64px;height:64px;border-radius:50%;background:var(--brand);color:#fff;display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:700}
+.btn.danger{color:var(--red);border-color:var(--red)}
+details summary{cursor:pointer}
+fieldset.svc label.check{margin:6px 0;font-weight:500}
+p.err:empty{display:none}
+.ok{color:#047857;font-weight:600}

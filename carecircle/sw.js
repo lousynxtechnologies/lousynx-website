@@ -1,4 +1,4 @@
-const CACHE = 'carecircle-v2';
+const CACHE = 'carecircle-v3';
 const ASSETS = [
   'app.html', 'app.js', 'style.css', 'manifest.webmanifest', 'icon.svg', 'icon-192.png', 'icon-512.png',
   'vendor/leaflet/leaflet.js', 'vendor/leaflet/leaflet.css',

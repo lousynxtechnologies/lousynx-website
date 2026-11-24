@@ -1,5 +1,6 @@
 /* CareCircle — DRAFT prototype. Single-device demo: data is stored locally in this browser.
-   Other people on the map are SIMULATED. A real version needs a backend (see BACKEND.md). */
+   Accounts here are LOCAL to this device (salted PBKDF2 hashes, never plain text) — real sign-in
+   must be done by a server (see BACKEND.md). Other people on the map are SIMULATED. */
 (() => {
   'use strict';
   const KEY = 'carecircle.v1';
@@ -15,9 +16,11 @@
     open: 'Waiting for a helper', accepted: 'Helper on the way', arrived: 'Helper is here',
     done: 'Finished', cancelled: 'Cancelled',
   };
+  const PBKDF2_ITERATIONS = 150000;
+  const MAX_FAILS = 5, LOCK_MS = 30000;
 
   const defaults = () => ({
-    role: 'senior', big: false, share: false,
+    role: 'senior', big: false, share: false, session: null, accounts: [],
     senior: { name: '', emergencyName: '', emergencyPhone: '' },
     helper: { name: '' },
     requests: [],
@@ -27,12 +30,37 @@
   const save = () => localStorage.setItem(KEY, JSON.stringify(state));
 
   const $ = (s, r = document) => r.querySelector(s);
-  const esc = v => String(v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const uid = () => Math.random().toString(36).slice(2, 10);
   const cat = id => CATEGORIES.find(c => c.id === id) || CATEGORIES[3];
   const phoneOk = p => /^[+0-9()\-\s]{7,20}$/.test(p);
+  const emailOk = e => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(e);
+  const pwOk = p => p.length >= 8 && /[A-Za-z]/.test(p) && /\d/.test(p);
   const newCode = () => String(Math.floor(1000 + Math.random() * 9000));
   const stars = n => '★'.repeat(n) + '☆'.repeat(5 - n);
+
+  // ---------------- session helpers ----------------
+  const acct = () => state.accounts.find(a => a.id === state.session) || null;
+  const isGuest = () => state.session === 'guest';
+  const loggedIn = () => isGuest() || !!acct();
+  const role = () => acct() ? acct().role : state.role;
+  const cid = () => acct() ? acct().id : 'guest';
+  const profile = () => acct() ? acct().profile : (state.role === 'senior' ? state.senior : state.helper);
+  if (state.session && state.session !== 'guest' && !acct()) { state.session = null; }
+
+  // ---------------- password hashing (WebCrypto PBKDF2) ----------------
+  const b64e = buf => btoa(String.fromCharCode(...new Uint8Array(buf)));
+  const b64d = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+  async function hashPw(pw, saltB64) {
+    const subtle = (window.crypto || {}).subtle;
+    if (!subtle) throw new Error('secure-context');
+    const key = await subtle.importKey('raw', new TextEncoder().encode(pw), 'PBKDF2', false, ['deriveBits']);
+    const bits = await subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt: b64d(saltB64), iterations: PBKDF2_ITERATIONS }, key, 256);
+    return b64e(bits);
+  }
+  const newSalt = () => b64e(window.crypto.getRandomValues(new Uint8Array(16)));
+  const safeEq = (a, b) => { if (a.length !== b.length) return false; let d = 0; for (let i = 0; i < a.length; i++) d |= a.charCodeAt(i) ^ b.charCodeAt(i); return d === 0; };
+  const fails = {}; // email -> { n, until }  (in-memory throttle for the demo)
 
   // ---------------- geo helpers ----------------
   const DEFAULT_CENTER = { lat: 43.8561, lng: -79.3370 }; // demo area (Markham, ON) used when sharing is off
@@ -81,22 +109,30 @@
 
   // ---------------- simulated people ----------------
   const demoHelpers = () => [0, 1, 2].map(i => ({ id: 'dh' + i, pos: offset(me, 600 + i * 500, 70 + i * 110) }));
+  const isMineAsSenior = r => (r.ownerId || 'guest') === cid();
+  const isMineAsHelper = r => r.helperId === cid();
+  const activeJob = () => [...state.requests].reverse().find(r =>
+    (r.status === 'accepted' || r.status === 'arrived') && (role() === 'senior' ? isMineAsSenior(r) : isMineAsHelper(r)));
   const helperSelf = () => {
-    const job = activeJob('helper');
+    const job = activeJob();
     return job && job.helperPos ? job.helperPos : offset(me, 1200, 45);
   };
-  const activeJob = () => [...state.requests].reverse().find(r => r.status === 'accepted' || r.status === 'arrived');
   const reqPos = r => r.pos || me;
   const startHelper = r => { r.helperPos = offset(reqPos(r), 1500, hash(r.id) % 360); };
 
   let tab = { senior: 'home', helper: 'jobs' };
   let draftCat = null;
+  let authTab = 'login';
+  let authMsg = '';
+
+  const initials = (name, fallback) => (String(name || fallback || '?').trim().split(/\s+/).map(s => s[0]).slice(0, 2).join('') || '?').toUpperCase();
 
   function reqCard(r, mode) {
     const c = cat(r.category);
     const lines = [`<b>${c.icon} ${esc(c.title)}</b> — ${esc(r.when)}`];
     if (r.notes) lines.push(`<span>${esc(r.notes)}</span>`);
     if (mode === 'helper' && r.status === 'open') lines.push(`<small>About ${fmtDist(dist(helperSelf(), jitter(r.id, reqPos(r), 400)))} away (approximate area)${r.demo ? ' · demo' : ''}</small>`);
+    if (mode === 'helper' && r.status !== 'open' && r.ownerName) lines.push(`<small>For ${esc(r.ownerName)}</small>`);
     lines.push(`<small>${STATUS_LABEL[r.status]}${r.helper ? ' · ' + esc(r.helper) : ''}${r.rating ? ' · ' + stars(r.rating) : ''}</small>`);
     let actions = '';
     if (mode === 'senior') {
@@ -114,11 +150,95 @@
     return `<li class="card">${lines.join('<br>')}${actions ? `<div class="acts">${actions}</div>` : ''}</li>`;
   }
 
+  // ---------------- auth screen ----------------
+  function authView() {
+    const login = authTab === 'login';
+    return `
+    <section class="card">
+      <div class="seg" role="tablist" aria-label="Account">
+        <button role="tab" aria-selected="${login}" data-auth="login">Log in</button>
+        <button role="tab" aria-selected="${!login}" data-auth="register">Create account</button>
+      </div>
+      <p id="authMsg" class="err" role="alert">${esc(authMsg)}</p>
+      ${login ? `
+      <form id="loginForm" novalidate>
+        <label>Email<input name="email" type="email" autocomplete="username" required></label>
+        <label>Password<input name="password" type="password" data-pw autocomplete="current-password" required></label>
+        <label class="check"><input type="checkbox" id="showPw"> Show password</label>
+        <button class="btn big">Log in</button>
+      </form>` : `
+      <form id="regForm" novalidate>
+        <fieldset class="roles2"><legend>I want to…</legend>
+          <label class="rolecard"><input type="radio" name="role" value="senior" checked><span><b>🙋 Get help</b><small>I'm a senior or a family member</small></span></label>
+          <label class="rolecard"><input type="radio" name="role" value="helper"><span><b>🤝 Be a helper</b><small>I can chat, shop or keep company</small></span></label>
+        </fieldset>
+        <label>Your name<input name="name" maxlength="40" autocomplete="name" required></label>
+        <label>Email<input name="email" type="email" autocomplete="username" required></label>
+        <label>Password <small>At least 8 characters, with a letter and a number</small><input name="password" type="password" data-pw autocomplete="new-password" required></label>
+        <label>Confirm password<input name="confirm" type="password" data-pw autocomplete="new-password" required></label>
+        <label class="check"><input type="checkbox" id="showPw"> Show passwords</label>
+        <label class="check"><input type="checkbox" name="agree" required> I understand this is a demo: my account stays on this device only.</label>
+        <button class="btn big">Create my account</button>
+      </form>`}
+      <p class="hint">Real sign-in (with verification and recovery) needs a server. This draft keeps accounts on this device and stores only salted password hashes.</p>
+    </section>
+    <section class="card"><p>Just looking around?</p><button class="btn ghost" id="guestBtn">Continue as guest (demo)</button></section>`;
+  }
+
+  // ---------------- profile (Me) ----------------
+  function meView() {
+    const a = acct(), p = profile(), r = role();
+    const f = (k) => esc(p[k] || '');
+    const common = `
+      <label>Display name<input name="name" maxlength="40" value="${f('name')}" required></label>
+      <label>Phone <small>Optional</small><input name="phone" type="tel" maxlength="20" value="${f('phone')}" autocomplete="tel"></label>
+      <label>Neighbourhood / city <small>Rough area only — never your street address</small><input name="area" maxlength="60" value="${f('area')}"></label>
+      <label>Languages spoken<input name="languages" maxlength="60" value="${f('languages')}" placeholder="e.g. English, Mandarin"></label>`;
+    const seniorFields = `
+      <label>A little about me <small>Anything that helps a helper be kind and useful</small><textarea name="bio" maxlength="300" rows="3">${f('bio')}</textarea></label>
+      <h3>Family / emergency contact</h3>
+      <label>Contact's name<input name="emergencyName" maxlength="40" value="${f('emergencyName')}"></label>
+      <label>Contact's phone<input name="emergencyPhone" type="tel" maxlength="20" value="${f('emergencyPhone')}"></label>`;
+    const helperFields = `
+      <fieldset class="svc"><legend>I can help with</legend>
+        ${CATEGORIES.map(c => `<label class="check"><input type="checkbox" name="services" value="${c.id}" ${(p.services || []).includes(c.id) ? 'checked' : ''}> ${c.icon} ${c.title}</label>`).join('')}
+      </fieldset>
+      <label>When I'm usually free<input name="availability" maxlength="80" value="${f('availability')}" placeholder="e.g. weekday afternoons"></label>
+      <label>About me<textarea name="bio" maxlength="300" rows="3">${f('bio')}</textarea></label>
+      <p class="hint">Identity check: <b>not started</b>. A real launch requires ID and background checks before anyone can accept requests.</p>`;
+    return `
+    <section class="card prof">
+      <div class="avatar" aria-hidden="true">${esc(initials(p.name, a && a.email))}</div>
+      <div><h2>${esc(p.name || (a ? 'Your profile' : 'Guest'))}</h2>
+        <span class="tag">${r === 'senior' ? 'Getting help' : 'Helper'}</span>
+        ${a ? `<small>${esc(a.email)} · member since ${esc(new Date(a.created).toLocaleDateString())}</small>` : '<small>Guest mode — nothing is tied to an account</small>'}</div>
+    </section>
+    <section class="card"><h2>Edit profile</h2>
+      <form id="meForm" novalidate>${common}${r === 'senior' ? seniorFields : helperFields}<button class="btn">Save changes</button></form>
+    </section>
+    ${a ? `
+    <section class="card"><h2>Change password</h2>
+      <form id="pwForm" novalidate>
+        <label>Current password<input name="current" type="password" data-pw autocomplete="current-password"></label>
+        <label>New password<input name="next" type="password" data-pw autocomplete="new-password"></label>
+        <label>Confirm new password<input name="confirm" type="password" data-pw autocomplete="new-password"></label>
+        <label class="check"><input type="checkbox" id="showPw"> Show passwords</label>
+        <p id="pwMsg" class="err" role="alert"></p>
+        <button class="btn">Update password</button>
+      </form></section>` : `
+    <section class="card"><h2>Want to keep your profile?</h2><p class="hint">Create an account so your profile and requests belong to you.</p>
+      <button class="btn" id="goRegister">Create an account</button></section>`}
+    <section class="card"><button class="btn ghost" id="logout">${a ? 'Log out' : 'Leave guest mode'}</button>
+      ${a ? '<button class="btn ghost danger" id="delAcct">Delete my account</button>' : ''}</section>
+    <section class="card"><details><summary><b>About this draft</b></summary>${aboutText()}</details></section>`;
+  }
+
   const views = {
     // ---------- senior ----------
     'senior:home'() {
+      const p = profile();
       return `
-      <section class="card"><h2>${state.senior.name ? `Hello, ${esc(state.senior.name)}!` : 'Hello!'}</h2>
+      <section class="card"><h2>${p.name ? `Hello, ${esc(p.name.split(' ')[0])}!` : 'Hello!'}</h2>
         <p>What would you like help with?</p>
         <div class="grid">${CATEGORIES.map(c => `<button class="tile" data-cat="${c.id}"><span class="ico">${c.icon}</span><b>${c.title}</b><small>${c.help}</small></button>`).join('')}</div>
       </section>
@@ -134,24 +254,18 @@
         </form></section>` : ''}`;
     },
     'senior:mine'() {
-      const list = [...state.requests].sort((a, b) => b.created - a.created);
+      const list = state.requests.filter(isMineAsSenior).sort((a, b) => b.created - a.created);
       return `<h2 class="pad">My requests</h2><ul class="plain">${list.map(r => reqCard(r, 'senior')).join('') || '<li class="card hint">No requests yet. Tap Home to ask for help.</li>'}</ul>`;
     },
     'senior:safety'() {
-      const s = state.senior;
+      const s = profile();
       const call = s.emergencyPhone && phoneOk(s.emergencyPhone)
-        ? `<a class="btn big" href="tel:${esc(s.emergencyPhone.replace(/[^+0-9]/g, ''))}">📞 Call ${esc(s.emergencyName || 'my contact')}</a>` : '<p class="hint">Add a family contact below to get a quick-call button.</p>';
+        ? `<a class="btn big" href="tel:${esc(s.emergencyPhone.replace(/[^+0-9]/g, ''))}">📞 Call ${esc(s.emergencyName || 'my contact')}</a>` : '<p class="hint">Add a family contact in the <b>Me</b> tab to get a quick-call button here.</p>';
       return `
       <section class="card danger"><h2>Emergency</h2>
         <p>In an emergency, call your local emergency number right away. CareCircle is not an emergency or medical service.</p>
         <a class="btn big red" href="tel:911">🚨 Call 911</a></section>
-      <section class="card"><h2>My family contact</h2>${call}
-        <form id="profileForm">
-          <label>My name<input name="name" maxlength="40" value="${esc(s.name)}"></label>
-          <label>Contact's name<input name="ename" maxlength="40" value="${esc(s.emergencyName)}"></label>
-          <label>Contact's phone<input name="ephone" type="tel" maxlength="20" value="${esc(s.emergencyPhone)}"></label>
-          <button class="btn">Save</button>
-        </form></section>
+      <section class="card"><h2>My family contact</h2>${call}</section>
       <section class="card"><h2>Staying safe</h2><ul>
         <li>Only let a helper in if they say your <b>safety code</b>.</li>
         <li>Never give out bank details, PINs or passwords.</li>
@@ -162,33 +276,28 @@
     'helper:jobs'() {
       const open = state.requests.filter(r => r.status === 'open');
       return `<h2 class="pad">Requests near you <span class="tag">demo</span></h2>
-        <ul class="plain">${open.map(r => reqCard(r, 'helper')).join('') || '<li class="card hint">No open requests. Open the Map tab and tap “Add demo requests”, or switch to “I need help” and post one.</li>'}</ul>`;
+        <ul class="plain">${open.map(r => reqCard(r, 'helper')).join('') || '<li class="card hint">No open requests. Open the Map tab and tap “Add demo requests”, or log in as a senior and post one.</li>'}</ul>`;
     },
     'helper:mine'() {
-      const mine = state.requests.filter(r => ['accepted', 'arrived', 'done'].includes(r.status));
+      const mine = state.requests.filter(r => isMineAsHelper(r) && ['accepted', 'arrived', 'done'].includes(r.status));
       return `<h2 class="pad">My jobs</h2><ul class="plain">${mine.map(r => reqCard(r, 'helper')).join('') || '<li class="card hint">No jobs yet.</li>'}</ul>`;
-    },
-    'helper:profile'() {
-      return `<section class="card"><h2>Helper profile</h2>
-        <form id="helperForm"><label>Display name<input name="name" maxlength="40" value="${esc(state.helper.name)}"></label><button class="btn">Save</button></form>
-        <p class="hint">A real launch would require identity checks, a police/background check and training before anyone can accept requests.</p></section>`;
     },
     // ---------- map (both roles) ----------
     'senior:map'() { return mapView('senior'); },
     'helper:map'() { return mapView('helper'); },
-    // ---------- shared ----------
-    'senior:about'() { return about(); },
-    'helper:about'() { return about(); },
+    // ---------- me ----------
+    'senior:me'() { return meView(); },
+    'helper:me'() { return meView(); },
   };
 
-  function mapView(role) {
+  function mapView(r) {
     return `
     <section class="card"><h2>🗺️ Map</h2>
       <p id="mapInfo" aria-live="polite"></p>
       <div id="map" role="application" aria-label="Map showing nearby people"></div>
       <div class="legend"><span class="dot me"></span> You <span class="dot helper"></span> Helper <span class="dot senior"></span> Person needing help <span class="dot area"></span> Approximate area</div>
       <button class="btn ghost" id="recenter">Re-center</button>
-      ${role === 'helper' ? '<button class="btn ghost" id="demoReqs">Add demo requests</button>' : ''}
+      ${r === 'helper' ? '<button class="btn ghost" id="demoReqs">Add demo requests</button>' : ''}
     </section>
     <section class="card"><h3>Location &amp; privacy</h3>
       <label class="check"><input type="checkbox" id="shareToggle" ${state.share ? 'checked' : ''}> Share my location on this device</label>
@@ -199,22 +308,22 @@
         <li>Demo: the other people on this map are simulated.</li></ul></section>`;
   }
 
-  function about() {
-    return `<section class="card"><h2>About this draft</h2>
+  function aboutText() {
+    return `
       <p>CareCircle connects seniors with helpers for chatting, shopping and companionship — like a ride-hailing app, but for everyday help.</p>
-      <p>This is an early prototype. Everything is stored on <b>this device only</b>, helpers and other people on the map are simulated, and no money moves.</p>
+      <p>This is an early prototype. Everything is stored on <b>this device only</b>, other people on the map are simulated, and no money moves.</p>
       <h3>What's next</h3><ul>
-        <li>Backend for real matching, live location, notifications and ratings</li>
+        <li>Backend for real sign-in, matching, live location, notifications and ratings</li>
         <li>Helper identity and background checks</li>
         <li>Family dashboard and trusted-contact alerts</li>
         <li>Payments through a licensed provider</li></ul>
       <p class="hint">Not an emergency, medical or personal-care service. Rules for in-home visits, background checks, location privacy and payments vary by region — get legal advice before launching.</p>
-      <button class="btn ghost" id="reset">Erase data on this device</button></section>`;
+      <button class="btn ghost" id="reset">Erase ALL CareCircle data on this device</button>`;
   }
 
   const NAVS = {
-    senior: [['home', '🏠', 'Home'], ['mine', '📋', 'Requests'], ['map', '🗺️', 'Map'], ['safety', '🛟', 'Safety'], ['about', 'ℹ️', 'About']],
-    helper: [['jobs', '🔎', 'Requests'], ['mine', '📋', 'My jobs'], ['map', '🗺️', 'Map'], ['profile', '👤', 'Profile'], ['about', 'ℹ️', 'About']],
+    senior: [['home', '🏠', 'Home'], ['mine', '📋', 'Requests'], ['map', '🗺️', 'Map'], ['safety', '🛟', 'Safety'], ['me', '👤', 'Me']],
+    helper: [['jobs', '🔎', 'Requests'], ['mine', '📋', 'My jobs'], ['map', '🗺️', 'Map'], ['me', '👤', 'Me']],
   };
 
   // ---------------- map drawing ----------------
@@ -223,7 +332,7 @@
 
   function mapData() {
     const items = []; let line = null, info = '';
-    if (state.role === 'senior') {
+    if (role() === 'senior') {
       items.push({ pos: me, kind: 'me', label: 'You' });
       const job = activeJob();
       if (job && job.helperPos) {
@@ -235,7 +344,7 @@
             : `<b>${esc(job.helper || 'Your helper')}</b> is ${fmtDist(d)} away — about ${etaMin(d)} min.`;
       } else {
         demoHelpers().forEach(h => items.push({ pos: jitter(h.id, h.pos, 300), kind: 'helper', label: 'Helper nearby (approx.)', radius: 300 }));
-        const open = state.requests.some(r => r.status === 'open');
+        const open = state.requests.some(r => r.status === 'open' && isMineAsSenior(r));
         info = open ? 'Your request is sent. Helpers nearby can see a rough area, not your address.' : `${demoHelpers().length} helpers are nearby (approximate areas, demo).`;
       }
     } else {
@@ -287,7 +396,7 @@
     layer = L.layerGroup().addTo(map); fitted = false; drawMap();
   }
   function destroyMap() { if (map) { try { map.remove(); } catch { /* ignore */ } } map = null; layer = null; }
-  const onMapTab = () => tab[state.role] === 'map';
+  const onMapTab = () => loggedIn() && tab[role()] === 'map';
   function refreshMap(refit) { if (onMapTab()) { $('#geoMsg') && ($('#geoMsg').innerHTML = geoMsg()); drawMap(refit); } }
 
   // Simulated helper walking toward the senior (demo only).
@@ -304,43 +413,131 @@
   function render() {
     destroyMap();
     document.body.classList.toggle('big', !!state.big);
-    $('#roleSenior').setAttribute('aria-pressed', state.role === 'senior');
-    $('#roleHelper').setAttribute('aria-pressed', state.role === 'helper');
-    $('#view').innerHTML = views[`${state.role}:${tab[state.role]}`]();
-    $('nav').innerHTML = NAVS[state.role].map(([id, ico, label]) =>
-      `<button data-tab="${id}" aria-current="${tab[state.role] === id ? 'page' : 'false'}"><span>${ico}</span>${label}</button>`).join('');
+    const guest = isGuest();
+    $('.roles').hidden = !guest;
+    if (!loggedIn()) {
+      $('#view').innerHTML = authView();
+      $('nav').innerHTML = ''; $('nav').hidden = true;
+      bind(); return;
+    }
+    $('nav').hidden = false;
+    $('#roleSenior').setAttribute('aria-pressed', role() === 'senior');
+    $('#roleHelper').setAttribute('aria-pressed', role() === 'helper');
+    $('#view').innerHTML = views[`${role()}:${tab[role()]}`]();
+    $('nav').innerHTML = NAVS[role()].map(([id, ico, label]) =>
+      `<button data-tab="${id}" aria-current="${tab[role()] === id ? 'page' : 'false'}"><span>${ico}</span>${label}</button>`).join('');
     bind();
     if (onMapTab()) initMap();
   }
   const toast = m => { const t = $('#toast'); t.textContent = m; t.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => t.hidden = true, 2500); };
   const byId = id => state.requests.find(r => r.id === id);
+  const setAuthMsg = m => { authMsg = m; const el = $('#authMsg'); if (el) el.textContent = m; };
+
+  // ---------------- auth actions ----------------
+  async function doRegister(form) {
+    const f = new FormData(form);
+    const rl = f.get('role') === 'helper' ? 'helper' : 'senior';
+    const name = (f.get('name') || '').trim(), email = (f.get('email') || '').trim().toLowerCase();
+    const pw = f.get('password') || '', confirm = f.get('confirm') || '';
+    if (!name) return setAuthMsg('Please enter your name.');
+    if (!emailOk(email)) return setAuthMsg('Please enter a valid email address.');
+    if (!pwOk(pw)) return setAuthMsg('Password needs at least 8 characters, with a letter and a number.');
+    if (pw !== confirm) return setAuthMsg('The two passwords do not match.');
+    if (!f.get('agree')) return setAuthMsg('Please tick the box to confirm you understand this is a demo.');
+    if (state.accounts.some(a => a.email === email)) return setAuthMsg('That email already has an account. Please log in instead.');
+    try {
+      const salt = newSalt(), h = await hashPw(pw, salt);
+      const profile = rl === 'senior' ? { name, emergencyName: '', emergencyPhone: '' } : { name, services: ['chat', 'shopping', 'company'] };
+      const a = { id: uid(), email, role: rl, salt, hash: h, created: Date.now(), profile };
+      state.accounts.push(a); state.session = a.id; save();
+      authMsg = ''; draftCat = null; tab = { senior: 'home', helper: 'jobs' };
+      toast(`Welcome, ${name.split(' ')[0]}!`); render();
+    } catch (e) { setAuthMsg(e.message === 'secure-context' ? 'This browser needs a secure (https) connection to create accounts.' : 'Something went wrong. Please try again.'); }
+  }
+  async function doLogin(form) {
+    const f = new FormData(form);
+    const email = (f.get('email') || '').trim().toLowerCase(), pw = f.get('password') || '';
+    if (!emailOk(email) || !pw) return setAuthMsg('Please enter your email and password.');
+    const fl = fails[email] || { n: 0, until: 0 };
+    if (fl.until > Date.now()) return setAuthMsg(`Too many tries. Please wait ${Math.ceil((fl.until - Date.now()) / 1000)} seconds.`);
+    const a = state.accounts.find(x => x.email === email);
+    try {
+      const h = await hashPw(pw, a ? a.salt : newSalt()); // always hash, so timing doesn't reveal if the email exists
+      if (a && safeEq(h, a.hash)) {
+        delete fails[email]; state.session = a.id; save();
+        authMsg = ''; draftCat = null; tab = { senior: 'home', helper: 'jobs' }; render(); return;
+      }
+    } catch (e) { return setAuthMsg(e.message === 'secure-context' ? 'This browser needs a secure (https) connection to log in.' : 'Something went wrong. Please try again.'); }
+    fl.n += 1; if (fl.n >= MAX_FAILS) { fl.until = Date.now() + LOCK_MS; fl.n = 0; }
+    fails[email] = fl;
+    setAuthMsg('Email or password is incorrect.');
+  }
+  function doLogout() {
+    stopGeo(); state.share = false; state.session = null; draftCat = null; authMsg = ''; authTab = 'login';
+    save(); render();
+  }
+  async function doChangePw(form) {
+    const a = acct(), f = new FormData(form), msg = $('#pwMsg');
+    const say = m => { msg.textContent = m; msg.className = m.startsWith('✅') ? 'ok' : 'err'; };
+    const cur = f.get('current') || '', next = f.get('next') || '', conf = f.get('confirm') || '';
+    try {
+      if (!safeEq(await hashPw(cur, a.salt), a.hash)) return say('Your current password is not correct.');
+      if (!pwOk(next)) return say('New password needs at least 8 characters, with a letter and a number.');
+      if (next !== conf) return say('The new passwords do not match.');
+      const salt = newSalt(); a.salt = salt; a.hash = await hashPw(next, salt); save(); form.reset(); say('✅ Password updated.');
+    } catch { say('Something went wrong. Please try again.'); }
+  }
+  function doDelete() {
+    const a = acct(); if (!a) return;
+    if (!confirm('Delete your account and its requests from this device? This cannot be undone.')) return;
+    state.requests = state.requests.filter(r => r.ownerId !== a.id);
+    state.requests.forEach(r => { if (r.helperId === a.id && (r.status === 'accepted' || r.status === 'arrived')) { r.status = 'open'; delete r.helper; delete r.helperId; delete r.helperPos; delete r.code; } });
+    state.accounts = state.accounts.filter(x => x.id !== a.id);
+    doLogout(); toast('Account deleted');
+  }
 
   function bind() {
     const v = $('#view');
+    // ----- auth -----
+    v.querySelectorAll('[data-auth]').forEach(b => b.addEventListener('click', () => { authTab = b.dataset.auth; authMsg = ''; render(); }));
+    $('#loginForm', v)?.addEventListener('submit', e => { e.preventDefault(); doLogin(e.target); });
+    $('#regForm', v)?.addEventListener('submit', e => { e.preventDefault(); doRegister(e.target); });
+    $('#guestBtn', v)?.addEventListener('click', () => { state.session = 'guest'; save(); render(); });
+    v.querySelectorAll('#showPw').forEach(c => c.addEventListener('change', () => v.querySelectorAll('[data-pw]').forEach(i => { i.type = c.checked ? 'text' : 'password'; })));
+    // ----- me -----
+    $('#logout', v)?.addEventListener('click', doLogout);
+    $('#delAcct', v)?.addEventListener('click', doDelete);
+    $('#goRegister', v)?.addEventListener('click', () => { state.session = null; authTab = 'register'; save(); render(); });
+    $('#pwForm', v)?.addEventListener('submit', e => { e.preventDefault(); doChangePw(e.target); });
+    $('#meForm', v)?.addEventListener('submit', e => {
+      e.preventDefault(); const f = new FormData(e.target), p = profile();
+      const name = (f.get('name') || '').trim(); if (!name) { toast('Please enter a display name'); return; }
+      const phone = (f.get('phone') || '').trim(); if (phone && !phoneOk(phone)) { toast('Please check your phone number'); return; }
+      const upd = { name, phone, area: (f.get('area') || '').trim(), languages: (f.get('languages') || '').trim(), bio: (f.get('bio') || '').trim() };
+      if (role() === 'senior') {
+        const ep = (f.get('emergencyPhone') || '').trim(); if (ep && !phoneOk(ep)) { toast('Please check the contact\'s phone number'); return; }
+        upd.emergencyName = (f.get('emergencyName') || '').trim(); upd.emergencyPhone = ep;
+      } else { upd.services = f.getAll('services'); upd.availability = (f.get('availability') || '').trim(); }
+      Object.assign(p, upd); save(); toast('Profile saved'); render();
+    });
+    // ----- requests -----
     v.querySelectorAll('[data-cat]').forEach(b => b.addEventListener('click', () => { draftCat = b.dataset.cat; render(); $('#newreq')?.scrollIntoView?.(); }));
     $('#cancelDraft', v)?.addEventListener('click', () => { draftCat = null; render(); });
     $('#reqForm', v)?.addEventListener('submit', e => {
       e.preventDefault(); const f = new FormData(e.target);
-      state.requests.push({ id: uid(), category: draftCat, when: f.get('when'), notes: (f.get('notes') || '').trim(), status: 'open', created: Date.now(), pos: { ...me } });
+      state.requests.push({ id: uid(), ownerId: cid(), ownerName: (profile().name || '').split(' ')[0], category: draftCat, when: f.get('when'), notes: (f.get('notes') || '').trim(), status: 'open', created: Date.now(), pos: { ...me } });
       draftCat = null; tab.senior = 'mine'; save(); toast('Request sent'); render();
     });
     v.querySelectorAll('[data-cancel]').forEach(b => b.addEventListener('click', () => { const r = byId(b.dataset.cancel); if (r) { r.status = 'cancelled'; delete r.helperPos; save(); render(); } }));
     v.querySelectorAll('[data-sim]').forEach(b => b.addEventListener('click', () => {
-      const r = byId(b.dataset.sim); if (!r) return; r.status = 'accepted'; r.helper = 'Demo helper'; r.code = newCode(); startHelper(r); save(); render();
+      const r = byId(b.dataset.sim); if (!r) return; r.status = 'accepted'; r.helper = 'Demo helper'; r.helperId = 'demo'; r.code = newCode(); startHelper(r); save(); render();
     }));
     v.querySelectorAll('[data-rate]').forEach(b => b.addEventListener('click', () => {
       const [id, n] = b.dataset.rate.split(':'); const r = byId(id); if (r) { r.rating = +n; save(); toast('Thank you!'); render(); }
     }));
-    $('#profileForm', v)?.addEventListener('submit', e => {
-      e.preventDefault(); const f = new FormData(e.target); const ph = (f.get('ephone') || '').trim();
-      if (ph && !phoneOk(ph)) { toast('Please check the phone number'); return; }
-      state.senior = { name: f.get('name').trim(), emergencyName: f.get('ename').trim(), emergencyPhone: ph };
-      save(); toast('Saved'); render();
-    });
-    $('#helperForm', v)?.addEventListener('submit', e => { e.preventDefault(); state.helper.name = new FormData(e.target).get('name').trim(); save(); toast('Saved'); render(); });
     v.querySelectorAll('[data-accept]').forEach(b => b.addEventListener('click', () => {
       const r = byId(b.dataset.accept); if (!r || r.status !== 'open') return;
-      r.status = 'accepted'; r.helper = state.helper.name || 'Demo helper'; r.code = newCode(); startHelper(r); save(); tab.helper = 'mine'; toast('Accepted — ask the senior for their code'); render();
+      r.status = 'accepted'; r.helper = profile().name || 'Helper'; r.helperId = cid(); r.code = newCode(); startHelper(r); save(); tab.helper = 'mine'; toast('Accepted — ask the senior for their code'); render();
     }));
     v.querySelectorAll('[data-checkin]').forEach(b => b.addEventListener('click', () => {
       const r = byId(b.dataset.checkin); if (!r) return;
@@ -351,8 +548,8 @@
     v.querySelectorAll('[data-finish]').forEach(b => b.addEventListener('click', () => {
       const r = byId(b.dataset.finish); if (r) { r.status = 'done'; delete r.helperPos; save(); toast('Marked finished — locations are no longer shared'); render(); }
     }));
-    $('#reset', v)?.addEventListener('click', () => { if (confirm('Erase all CareCircle data on this device?')) { stopGeo(); state = defaults(); save(); draftCat = null; render(); } });
-    // map controls
+    $('#reset', v)?.addEventListener('click', () => { if (confirm('Erase ALL CareCircle data on this device, including accounts?')) { stopGeo(); state = defaults(); save(); draftCat = null; authTab = 'login'; render(); } });
+    // ----- map controls -----
     $('#recenter', v)?.addEventListener('click', () => drawMap(true));
     $('#shareToggle', v)?.addEventListener('change', e => {
       state.share = e.target.checked; save();
@@ -362,13 +559,13 @@
     $('#demoReqs', v)?.addEventListener('click', () => {
       [0, 1].forEach(i => {
         const id = uid(); const c = CATEGORIES[(hash(id) + i) % CATEGORIES.length];
-        state.requests.push({ id, category: c.id, when: WHEN[i], notes: '', status: 'open', created: Date.now(), demo: true, pos: offset(me, 700 + i * 650, 200 + i * 120) });
+        state.requests.push({ id, ownerId: 'demo', ownerName: 'Demo', category: c.id, when: WHEN[i], notes: '', status: 'open', created: Date.now(), demo: true, pos: offset(me, 700 + i * 650, 200 + i * 120) });
       });
       save(); toast('Added 2 demo requests'); render();
     });
   }
 
-  $('nav').addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (!b) return; tab[state.role] = b.dataset.tab; render(); window.scrollTo(0, 0); });
+  $('nav').addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (!b) return; tab[role()] = b.dataset.tab; render(); window.scrollTo(0, 0); });
   $('#roleSenior').addEventListener('click', () => { state.role = 'senior'; save(); render(); });
   $('#roleHelper').addEventListener('click', () => { state.role = 'helper'; save(); render(); });
   $('#bigText').addEventListener('click', () => { state.big = !state.big; save(); render(); });
@@ -378,7 +575,7 @@
   $('#install').addEventListener('click', async () => { if (!deferred) return; deferred.prompt(); await deferred.userChoice; deferred = null; $('#install').hidden = true; });
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 
-  if (state.share) startGeo();
+  if (state.share && loggedIn()) startGeo(); else state.share = false;
   setInterval(tick, 2000);
   window.CCGeo = { dist, offset, jitter, stepToward, etaMin, tick }; // exposed for tests
 
