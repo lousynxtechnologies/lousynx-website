@@ -40,5 +40,15 @@ Start simple: geo-radius + category + helper availability, offered to a few help
 ## Payments (not in the draft)
 Use a licensed processor with marketplace/escrow support (e.g. Stripe Connect). Do not hold funds yourself. No cash handling by helpers.
 
+## Live location and the map
+The prototype simulates other people on the map. A real version:
+- **Transport:** WebSocket (or SSE + POST) channel per visit. Each device posts its position every few seconds only while a visit is `accepted` or `arrived`; the server relays it **only to the other party of that visit** and discards it when the visit ends or is cancelled.
+- **Open requests:** store the exact position encrypted; expose to helpers only a fuzzed centre + radius (the prototype uses ~400 m). Use a *stable* per-request offset (not fresh random noise each time) so repeated polling can't be averaged to find the true point.
+- **Helper discovery for seniors:** show only coarse "helpers nearby" (fuzzed, ~300 m). Never show an unmatched helper's live position.
+- **Spatial index:** PostGIS (`ST_DWithin`) or a geohash/H3 index for "open requests near me".
+- **Consent and control:** location sharing is opt-in, can be turned off at any time, and the server keeps no history beyond what safety/incident review needs (set a short retention, e.g. 30 days, encrypted).
+- **Safety extras:** "share my visit" link for family, alert if a helper's route stalls or deviates, SOS button that sends the live location to the family contact and operator.
+- **Map provider:** the prototype uses the public OpenStreetMap tile server with attribution, which is fine for a demo only. For production use a commercial/self-hosted tile provider (MapTiler, Mapbox, Stadia, or your own) to comply with usage policies.
+
 ## Notifications
 Push (FCM / Web Push) for new nearby requests, helper accepted, helper arriving, visit finished; SMS fallback for seniors without smartphones.

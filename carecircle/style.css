@@ -44,6 +44,13 @@ nav button span{font-size:1.4rem}
 nav button[aria-current=page]{color:var(--brand);font-weight:700;border-top:3px solid var(--brand)}
 #toast{position:fixed;left:50%;bottom:92px;transform:translateX(-50%);background:#111d;color:#fff;padding:10px 16px;border-radius:999px;z-index:9;max-width:90%}
 a{color:var(--brand)}
+#map{height:52vh;min-height:300px;border-radius:14px;border:2px solid var(--line);margin:10px 0;z-index:0}
+.legend{font-size:.8rem;color:var(--mute);display:flex;flex-wrap:wrap;gap:4px 12px;align-items:center;margin-bottom:6px}
+.dot{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:4px;vertical-align:middle}
+.dot.me{background:#2563eb}.dot.helper{background:#16a34a}.dot.senior{background:#ea580c}.dot.area{background:#ea580c33;border:2px solid #ea580c}
+label.check{display:flex;align-items:center;gap:12px}
+label.check input{width:28px;height:28px;margin:0;flex:none}
+nav button{font-size:.7rem}
 .hero{text-align:center;padding:26px 12px}
 .hero h1{margin:.2em 0}
 .btnrow{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:14px}
