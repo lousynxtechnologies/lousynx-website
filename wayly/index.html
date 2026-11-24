@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#1e3a8a">
+<title>Wayly — AI Travel Concierge (Draft) — Lousynx</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+  <section class="hero">
+    <img src="icon-192.png" width="96" height="96" alt="Wayly icon">
+    <h1>Wayly <span class="tag warn">DRAFT</span></h1>
+    <p><b>Your AI travel concierge.</b> Plan the trip, then let Wayly walk you through it by voice: check-in reminders, a taxi when you need one, and audio-guided tours with scenic descriptions at each attraction.</p>
+    <div class="btnrow">
+      <a class="btn" href="app.html">Open the app</a>
+      <button id="install" class="btn ghost" hidden>Install on this device</button>
+      <a class="btn ghost" href="wayly-draft-source.zip" download>Download source (.zip)</a>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>What's in the draft</h2>
+    <ul>
+      <li><b>Plan:</b> search sample flights and hotels, pick an airport transfer, and get a priced summary</li>
+      <li><b>Trip:</b> a step-by-step itinerary (check-in opens, leave for the airport, boarding, landing, hotel check-in, tours, check-out) with spoken reminders</li>
+      <li><b>Taxi help:</b> a ride card with a "show to the driver" screen, an Uber link and map directions</li>
+      <li><b>Guide:</b> audio tours and "describe the view" scenic descriptions for 15 sights in Toronto, Paris, Tokyo, New York and London, plus nearby sights using your location</li>
+      <li><b>Concierge:</b> ask by typing or by voice: "What's next?", "Call a taxi", "Tell me about the Eiffel Tower"</li>
+      <li><b>Demo trip:</b> fast-forward through a whole trip and hear every reminder in minutes</li>
+    </ul>
+  </section>
+
+  <section class="card">
+    <h2>Install on Android</h2>
+    <ol><li>Tap <b>Open the app</b> in Chrome.</li><li>Tap <b>⋮ → Install app</b> (or “Add to Home screen”).</li></ol>
+    <p class="hint">iPhone: Share → Add to Home Screen. Tip: turn your volume up for the voice features. This draft is a web app (PWA), not a Play Store APK.</p>
+  </section>
+
+  <section class="card warnbox">
+    <h2>Read before using</h2>
+    <ul>
+      <li>Prototype only. <b>Flights, hotels, prices and bookings are sample data</b> and are simulated: nothing is reserved and no payment is taken.</li>
+      <li>The concierge is a simple rule-based demo, not a live AI. A full version needs a server with an AI language model and live travel data (see BACKEND.md in the source download).</li>
+      <li>Reminders speak and show only while the app is open. Reminders when the app is closed need push notifications from a server.</li>
+      <li>Landmark notes are short general summaries. Always check official sources for opening hours, tickets, visas and travel rules.</li>
+      <li>Your trip stays on this device. Location is used only when you ask for nearby sights. Voice input (the microphone button) uses your browser's speech service.</li>
+    </ul>
+  </section>
+  <p class="hint" style="text-align:center"><a href="../">← Back to lousynx.com</a></p>
+</main>
+<script>
+let d;addEventListener('beforeinstallprompt',e=>{e.preventDefault();d=e;const b=document.getElementById('install');b.hidden=false;b.onclick=async()=>{d.prompt();await d.userChoice;b.hidden=true}});
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+</script>
+</body>
+</html>
