@@ -337,6 +337,57 @@
             line-height: 1.5;
         }
         
+        /* Showcase Section */
+        .showcase-section {
+            padding: 100px 0;
+            background: var(--gradient-1);
+            color: white;
+        }
+
+        .showcase-card {
+            display: flex;
+            align-items: center;
+            gap: 50px;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.18);
+            border-radius: 20px;
+            padding: 45px;
+        }
+
+        .showcase-icon {
+            flex: 0 0 140px;
+            height: 140px;
+            border-radius: 32px;
+            background: var(--gradient-3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 60px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.25);
+        }
+
+        .showcase-text h3 { font-size: 28px; margin-bottom: 8px; }
+        .showcase-text .badge {
+            display: inline-block;
+            font-size: 12px;
+            padding: 3px 12px;
+            border-radius: 20px;
+            background: rgba(255,255,255,0.2);
+            margin-left: 8px;
+            vertical-align: middle;
+            letter-spacing: 1px;
+        }
+        .showcase-text p { margin-bottom: 14px; opacity: 0.95; }
+        .showcase-text ul { margin: 0 0 22px 20px; opacity: 0.95; }
+        .showcase-text li { margin-bottom: 4px; }
+        .showcase-text .btn-outline { margin-left: 10px; }
+
+        @media (max-width: 768px) {
+            .showcase-card { flex-direction: column; text-align: center; padding: 30px 22px; gap: 25px; }
+            .showcase-text ul { text-align: left; }
+            .showcase-text .btn-outline { margin: 10px 0 0; }
+        }
+
         /* About Section */
         .about-section {
             background-color: white;
@@ -605,6 +656,7 @@
                     <li><a href="#home">Home</a></li>
                     <li><a href="#about">About</a></li>
                     <li><a href="#services">Services</a></li>
+                    <li><a href="#showcase">Showcase</a></li>
                     <li><a href="#contact">Contact</a></li>
                 </ul>
             </nav>
@@ -676,6 +728,30 @@
                     </div>
                     <h3>Innovative Travel Insurance</h3>
                     <p>Technology-driven insurance products leveraging data and emerging technologies.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Showcase Section -->
+    <section class="showcase-section" id="showcase">
+        <div class="container">
+            <div class="section-title">
+                <h2 style="color:white">Featured Project</h2>
+                <p style="color:rgba(255,255,255,0.85)">A look at what we're building: early prototypes you can try today</p>
+            </div>
+            <div class="showcase-card">
+                <div class="showcase-icon"><i class="fas fa-gamepad"></i></div>
+                <div class="showcase-text">
+                    <h3>GuildPool <span class="badge">DRAFT</span></h3>
+                    <p>A community app that turns playtime and achievements into reputation, with sponsor-funded seasonal challenges and a play-with-me network. Installs on Android from your browser.</p>
+                    <ul>
+                        <li>Seasonal challenges backed by sponsor prize pools</li>
+                        <li>Reputation points redeemable for in-kind rewards (no cash-out)</li>
+                        <li>Works offline, no special permissions required</li>
+                    </ul>
+                    <a href="guildpool/app.html" class="btn">Try the App</a>
+                    <a href="guildpool/" class="btn btn-outline">Details &amp; Download</a>
                 </div>
             </div>
         </div>
