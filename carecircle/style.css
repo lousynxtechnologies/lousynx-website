@@ -74,3 +74,21 @@ details summary{cursor:pointer}
 fieldset.svc label.check{margin:6px 0;font-weight:500}
 p.err:empty{display:none}
 .ok{color:#047857;font-weight:600}
+
+/* chat */
+.chat .chathead{display:flex;gap:12px;align-items:center;margin-bottom:6px}
+.chat h2{margin:0}
+.hint.safe{background:#fffbeb;border:1px solid #fcd34d;border-radius:10px;padding:8px 10px}
+.chatlog{list-style:none;margin:10px 0;padding:10px;height:42vh;min-height:220px;overflow-y:auto;background:#f1f5f4;border-radius:14px;display:flex;flex-direction:column;gap:8px}
+.bubble{max-width:82%;padding:10px 12px;border-radius:16px;word-wrap:break-word;overflow-wrap:anywhere}
+.bubble small{display:block;margin-top:2px;opacity:.75}
+.bubble.me{align-self:flex-end;background:var(--brand);color:#fff;border-bottom-right-radius:4px}
+.bubble.me small{color:#d1fae5}
+.bubble.them{align-self:flex-start;background:#fff;border:1px solid var(--line);border-bottom-left-radius:4px}
+.chatlog .empty{align-self:center;margin:auto}
+.chips{display:flex;gap:6px;overflow-x:auto;padding:4px 0 8px}
+.chip{flex:none;border:2px solid var(--line);background:#fff;color:var(--ink);padding:8px 12px;border-radius:999px;font:inherit;font-size:.85rem;cursor:pointer}
+.chip:hover{border-color:var(--brand)}
+.badge{display:inline-block;background:#dc2626;color:#fff;border-radius:999px;font-size:.72rem;font-style:normal;padding:0 7px;margin-left:4px;vertical-align:middle;line-height:1.5}
+nav button span{position:relative}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}

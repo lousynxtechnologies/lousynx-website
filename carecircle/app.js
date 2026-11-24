@@ -124,6 +124,24 @@
   let draftCat = null;
   let authTab = 'login';
   let authMsg = '';
+  let chatId = null;      // request whose chat is open
+  let chatWarned = false; // first send of a "sensitive-looking" message only warns
+
+  // ---------------- chat helpers ----------------
+  const SENSITIVE = /\b(?:\d[ -]?){12,19}\b|\bpassword\b|\bpasscode\b|\bpin\b|\bsin\b|social insurance|credit card|bank account|e-?transfer/i;
+  const chatOpen = r => r.status === 'accepted' || r.status === 'arrived';          // can send
+  const canChat = r => (r.status === 'accepted' || r.status === 'arrived' || (r.status === 'done' && (r.chat || []).length > 0))
+    && (role() === 'senior' ? isMineAsSenior(r) : isMineAsHelper(r));
+  const partyName = r => role() === 'senior' ? (r.helper || 'Your helper') : (r.ownerName || 'The senior');
+  const unread = r => (r.chat || []).filter(m => m.from !== role() && m.ts > ((r.chatRead || {})[role()] || 0)).length;
+  const unreadTotal = () => state.requests.filter(canChat).reduce((n, r) => n + unread(r), 0);
+  const markRead = r => { r.chatRead = Object.assign(r.chatRead || {}, { [role()]: Date.now() }); };
+  const isSimParty = r => role() === 'senior' ? r.helperId === 'demo' : r.ownerId === 'demo';
+  const simReplyText = t => /where|meet|door|lobby/i.test(t) ? 'How about the front door of your building? I will wait there and message you when I arrive.'
+    : /when|time|late|long/i.test(t) ? 'I can be there in about 15 minutes.'
+      : /thank/i.test(t) ? 'You are very welcome! 😊' : 'Sounds good — see you soon!';
+  const QUICK = ['Where shall we meet?', 'What time suits you?', 'I am outside now', 'Running 5 minutes late', 'Thank you!'];
+  const fmtTime = ts => new Date(ts).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 
   const initials = (name, fallback) => (String(name || fallback || '?').trim().split(/\s+/).map(s => s[0]).slice(0, 2).join('') || '?').toUpperCase();
 
@@ -147,7 +165,33 @@
         <button class="btn" data-checkin="${r.id}">Check in</button><small id="err-${r.id}" class="err"></small>`;
       if (r.status === 'arrived') actions = `<button class="btn" data-finish="${r.id}">Mark finished</button>`;
     }
+    if (canChat(r)) {
+      const n = unread(r);
+      actions = `<button class="btn ghost" data-chat="${r.id}">💬 ${r.status === 'done' ? 'View chat' : 'Chat'}${n ? ` <span class="badge">${n} new</span>` : ''}</button>` + actions;
+    }
     return `<li class="card">${lines.join('<br>')}${actions ? `<div class="acts">${actions}</div>` : ''}</li>`;
+  }
+
+  // ---------------- chat screen ----------------
+  function chatView(r) {
+    const open = chatOpen(r), msgs = r.chat || [];
+    const bubbles = msgs.map(m => `<li class="bubble ${m.from === role() ? 'me' : 'them'}"><span>${esc(m.text)}</span><small>${fmtTime(m.ts)}${m.sim ? ' · demo reply' : ''}</small></li>`).join('');
+    return `
+    <section class="card chat">
+      <div class="chathead"><button class="btn sm ghost" id="chatBack" aria-label="Back">← Back</button>
+        <div><h2>💬 ${esc(partyName(r))}</h2><small>${esc(cat(r.category).title)} · ${esc(r.when)}${isSimParty(r) ? ' · demo partner' : ''}</small></div></div>
+      <p class="hint safe">Use this chat to agree where to meet and what to do. <b>Never share bank details, card numbers or passwords.</b> If anything worries you, tap Report.</p>
+      <ul class="chatlog" id="chatLog" role="log" aria-live="polite" aria-label="Messages">${bubbles || '<li class="hint empty">No messages yet. Say hello 👋</li>'}</ul>
+      ${open ? `
+      <div class="chips">${QUICK.map(q => `<button type="button" class="chip" data-quick="${esc(q)}">${esc(q)}</button>`).join('')}</div>
+      <form id="chatForm" autocomplete="off">
+        <label class="sr" for="chatInput">Message</label>
+        <input id="chatInput" name="text" maxlength="500" placeholder="Type a message…" required>
+        <p id="chatWarn" class="err" role="alert"></p>
+        <button class="btn big">Send</button>
+      </form>` : '<p class="hint">This visit is finished, so the chat is closed.</p>'}
+      <button class="btn sm ghost" id="reportBtn">⚑ Report a problem</button>
+    </section>`;
   }
 
   // ---------------- auth screen ----------------
@@ -423,11 +467,17 @@
     $('nav').hidden = false;
     $('#roleSenior').setAttribute('aria-pressed', role() === 'senior');
     $('#roleHelper').setAttribute('aria-pressed', role() === 'helper');
-    $('#view').innerHTML = views[`${role()}:${tab[role()]}`]();
+    const chatReq = chatId ? byId(chatId) : null;
+    const showChat = !!(chatReq && canChat(chatReq));
+    if (!showChat) chatId = null;
+    if (showChat) { markRead(chatReq); save(); }
+    $('#view').innerHTML = showChat ? chatView(chatReq) : views[`${role()}:${tab[role()]}`]();
+    const un = unreadTotal();
     $('nav').innerHTML = NAVS[role()].map(([id, ico, label]) =>
-      `<button data-tab="${id}" aria-current="${tab[role()] === id ? 'page' : 'false'}"><span>${ico}</span>${label}</button>`).join('');
+      `<button data-tab="${id}" aria-current="${tab[role()] === id && !showChat ? 'page' : 'false'}"><span>${ico}${id === 'mine' && un ? `<em class="badge">${un}</em>` : ''}</span>${label}</button>`).join('');
     bind();
-    if (onMapTab()) initMap();
+    if (showChat) { const log = $('#chatLog'); if (log) log.scrollTop = log.scrollHeight; }
+    else if (onMapTab()) initMap();
   }
   const toast = m => { const t = $('#toast'); t.textContent = m; t.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => t.hidden = true, 2500); };
   const byId = id => state.requests.find(r => r.id === id);
@@ -473,7 +523,7 @@
     setAuthMsg('Email or password is incorrect.');
   }
   function doLogout() {
-    stopGeo(); state.share = false; state.session = null; draftCat = null; authMsg = ''; authTab = 'login';
+    stopGeo(); state.share = false; state.session = null; draftCat = null; chatId = null; authMsg = ''; authTab = 'login';
     save(); render();
   }
   async function doChangePw(form) {
@@ -491,9 +541,32 @@
     const a = acct(); if (!a) return;
     if (!confirm('Delete your account and its requests from this device? This cannot be undone.')) return;
     state.requests = state.requests.filter(r => r.ownerId !== a.id);
-    state.requests.forEach(r => { if (r.helperId === a.id && (r.status === 'accepted' || r.status === 'arrived')) { r.status = 'open'; delete r.helper; delete r.helperId; delete r.helperPos; delete r.code; } });
+    state.requests.forEach(r => { if (r.helperId === a.id && (r.status === 'accepted' || r.status === 'arrived')) { r.status = 'open'; delete r.helper; delete r.helperId; delete r.helperPos; delete r.code; delete r.chat; delete r.chatRead; } });
     state.accounts = state.accounts.filter(x => x.id !== a.id);
     doLogout(); toast('Account deleted');
+  }
+
+  function sendChat(form) {
+    const r = byId(chatId); if (!r || !canChat(r)) return;
+    if (!chatOpen(r)) { toast('This chat is closed'); return; }
+    const input = form.elements.text, text = (input.value || '').trim().slice(0, 500);
+    if (!text) return;
+    if (SENSITIVE.test(text) && !chatWarned) {
+      chatWarned = true;
+      $('#chatWarn').textContent = 'This looks like it may contain private financial or login details. Please don\'t share these. Tap Send again only if you are sure.';
+      return;
+    }
+    chatWarned = false;
+    (r.chat = r.chat || []).push({ id: uid(), from: role(), text, ts: Date.now() });
+    markRead(r); save(); render(); $('#chatInput')?.focus?.();
+    if (isSimParty(r)) {
+      const rid = r.id, other = role() === 'senior' ? 'helper' : 'senior';
+      setTimeout(() => {
+        const q = byId(rid); if (!q || !chatOpen(q)) return;
+        (q.chat = q.chat || []).push({ id: uid(), from: other, text: simReplyText(text), ts: Date.now(), sim: true });
+        if (chatId === rid) { markRead(q); save(); render(); } else { save(); toast('New message'); render(); }
+      }, 1400);
+    }
   }
 
   function bind() {
@@ -519,6 +592,17 @@
         upd.emergencyName = (f.get('emergencyName') || '').trim(); upd.emergencyPhone = ep;
       } else { upd.services = f.getAll('services'); upd.availability = (f.get('availability') || '').trim(); }
       Object.assign(p, upd); save(); toast('Profile saved'); render();
+    });
+    // ----- chat -----
+    v.querySelectorAll('[data-chat]').forEach(b => b.addEventListener('click', () => { chatId = b.dataset.chat; chatWarned = false; render(); $('#chatInput')?.focus?.(); }));
+    $('#chatBack', v)?.addEventListener('click', () => { chatId = null; render(); });
+    v.querySelectorAll('[data-quick]').forEach(b => b.addEventListener('click', () => { const i = $('#chatInput', v); if (i) { i.value = b.dataset.quick; i.focus(); } }));
+    $('#chatInput', v)?.addEventListener('input', () => { chatWarned = false; const w = $('#chatWarn', v); if (w) w.textContent = ''; });
+    $('#chatForm', v)?.addEventListener('submit', e => { e.preventDefault(); sendChat(e.target); });
+    $('#reportBtn', v)?.addEventListener('click', () => {
+      const r = byId(chatId); if (!r) return;
+      (r.reports = r.reports || []).push({ by: role(), ts: Date.now() }); save();
+      toast('Thank you. In a real launch our safety team would review this right away.');
     });
     // ----- requests -----
     v.querySelectorAll('[data-cat]').forEach(b => b.addEventListener('click', () => { draftCat = b.dataset.cat; render(); $('#newreq')?.scrollIntoView?.(); }));

@@ -61,5 +61,15 @@ The prototype simulates other people on the map. A real version:
 - **Safety extras:** "share my visit" link for family, alert if a helper's route stalls or deviates, SOS button that sends the live location to the family contact and operator.
 - **Map provider:** the prototype uses the public OpenStreetMap tile server with attribution, which is fine for a demo only. For production use a commercial/self-hosted tile provider (MapTiler, Mapbox, Stadia, or your own) to comply with usage policies.
 
+## In-app chat between matched people
+The prototype stores messages inside the request and simulates replies from demo partners. A real version:
+- **Who can chat:** only the senior and the helper on an `accepted`/`arrived` visit (plus a read-only window afterwards). The server checks participation on every read/write; no direct messages between strangers, no group chats.
+- **Transport:** WebSocket (fallback to long-polling) per visit; push notification (FCM/APNs/Web Push) and SMS fallback for new messages when the app is closed. Delivery and read receipts.
+- **Privacy:** keep the conversation in the app; mask phone numbers (relay calls/SMS via a provider such as Twilio Proxy) so neither side needs to share a number. Encrypt in transit and at rest. Define retention (e.g. delete 30–90 days after the visit unless reported).
+- **Safety:** server-side checks for card numbers, banking/login words, links, and requests for cash or gift cards; warn the sender and flag for review. One-tap **Report** attaches the last N messages to an incident for a human safety team; repeat offenders are suspended.
+- **Limits:** rate-limit messages, cap length (500 chars in the draft), block attachments at first (add images later with scanning).
+- **Family visibility:** optionally let a trusted family member see that a chat exists and the visit details — not necessarily the content — unless the senior opts in.
+- **Accessibility:** large text, quick-reply chips, optional voice-to-text; read messages aloud for visually impaired seniors.
+
 ## Notifications
 Push (FCM / Web Push) for new nearby requests, helper accepted, helper arriving, visit finished; SMS fallback for seniors without smartphones.
