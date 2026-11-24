@@ -141,6 +141,79 @@
     : /when|time|late|long/i.test(t) ? 'I can be there in about 15 minutes.'
       : /thank/i.test(t) ? 'You are very welcome! 😊' : 'Sounds good — see you soon!';
   const QUICK = ['Where shall we meet?', 'What time suits you?', 'I am outside now', 'Running 5 minutes late', 'Thank you!'];
+  // ---------------- reviews ----------------
+  const HELPER_TAGS = ['On time', 'Kind & patient', 'Clear communication', 'Followed the safety code', 'Very helpful'];
+  const SENIOR_TAGS = ['Clear about needs', 'Respectful', 'Safe meeting place', 'Welcoming', 'Easy to coordinate'];
+  const CONTACT_LIKE = /\b\d{3}[ .-]?\d{3}[ .-]?\d{4}\b|@\w+\.\w+|https?:\/\/|www\./i;
+  // Demo-only starting reputations for simulated people (clearly labelled "demo" in the UI).
+  const SEEDS = {
+    helper: {
+      dh0: { name: 'Priya S.', avg: 4.9, count: 32, tags: { 'Kind & patient': 21, 'On time': 18 }, services: ['chat', 'company'],
+        comments: [{ stars: 5, text: 'So patient and warm. My mother loved the walk.', who: 'Family member' }, { stars: 5, text: 'Always on time.', who: 'Harold' }] },
+      dh1: { name: 'Tom B.', avg: 4.6, count: 18, tags: { 'Very helpful': 11, 'Clear communication': 9 }, services: ['shopping', 'other'],
+        comments: [{ stars: 5, text: 'Got everything on my list, and the receipt was perfect.', who: 'Elaine' }, { stars: 4, text: 'A little late but he messaged ahead.', who: 'Ravi' }] },
+      dh2: { name: 'Aisha K.', avg: 4.8, count: 9, tags: { 'Kind & patient': 7, 'Followed the safety code': 6 }, services: ['chat', 'shopping', 'company'],
+        comments: [{ stars: 5, text: 'Lovely chat over tea.', who: 'Margaret' }] },
+      demo: { name: 'Demo helper', avg: 4.8, count: 20, tags: { 'On time': 12, 'Kind & patient': 10 }, services: ['chat', 'shopping', 'company'], comments: [] },
+    },
+    senior: { demo: { avg: 4.7, count: 12, tags: { 'Respectful': 9, 'Clear about needs': 8 }, comments: [] } },
+  };
+  const subjectId = (r, subj) => subj === 'helper' ? r.helperId : (r.ownerId || 'guest');
+  const reviewAbout = (r, subj) => {
+    const rv = r.reviews && r.reviews[subj === 'helper' ? 'senior' : 'helper'];   // reviewer role is the opposite
+    if (rv) return rv;
+    return subj === 'helper' && r.rating ? { stars: r.rating, tags: [], text: '', ts: r.created, byName: '' } : null; // legacy star-only rating
+  };
+  function stats(subj, id) {
+    const seed = (SEEDS[subj] || {})[id];
+    let sum = seed ? seed.avg * seed.count : 0, n = seed ? seed.count : 0;
+    const tags = Object.assign({}, seed ? seed.tags : {}); const list = [];
+    state.requests.forEach(r => {
+      if (r.status !== 'done' || subjectId(r, subj) !== id) return;
+      const rv = reviewAbout(r, subj); if (!rv) return;
+      sum += rv.stars; n += 1; (rv.tags || []).forEach(t => { tags[t] = (tags[t] || 0) + 1; }); list.push(rv);
+    });
+    list.sort((a, b) => b.ts - a.ts);
+    const top = Object.entries(tags).sort((a, b) => b[1] - a[1]).slice(0, 2).map(e => e[0]);
+    return { avg: n ? sum / n : 0, count: n, top, list, seed };
+  }
+  const chip = st => st.count ? `<span class="rating" title="${st.count} review${st.count > 1 ? 's' : ''}">★ ${st.avg.toFixed(1)} <small>(${st.count})</small></span>` : '<span class="rating new">New · no reviews yet</span>';
+  const topTags = st => st.top.length ? `<small>${st.top.map(esc).join(' · ')}</small>` : '';
+  const starsRow = n => `<span class="stars" aria-label="${n} out of 5 stars">${stars(n)}</span>`;
+  const firstName = n => String(n || '').trim().split(/\s+/)[0];
+
+  function nearbyHelpers() {
+    const list = [];
+    state.accounts.filter(a => a.role === 'helper').forEach((a, i) => {
+      const pos = jitter(a.id, offset(me, 900 + i * 350, 20 + i * 80), 300);
+      list.push({ id: a.id, name: a.profile.name || 'Helper', services: a.profile.services || [], bio: a.profile.bio || '', demo: false, d: dist(me, pos) });
+    });
+    demoHelpers().forEach((h, i) => {
+      const sd = SEEDS.helper[h.id];
+      list.push({ id: h.id, name: sd.name, services: sd.services, bio: '', demo: true, d: dist(me, jitter(h.id, h.pos, 300)) });
+    });
+    list.forEach(x => { x.st = stats('helper', x.id); });
+    return list.sort((a, b) => (b.st.avg - a.st.avg) || (a.d - b.d));
+  }
+  function helpersCard() {
+    const items = nearbyHelpers().map(h => {
+      const real = h.st.list.slice(0, 3).map(rv => `<li>${starsRow(rv.stars)} ${rv.text ? esc(rv.text) : '<i>No comment</i>'} <small>— ${esc(rv.byName || 'A senior')}, ${esc(new Date(rv.ts).toLocaleDateString())}</small></li>`).join('');
+      const seeded = (h.st.seed ? h.st.seed.comments : []).map(c => `<li>${starsRow(c.stars)} ${esc(c.text)} <small>— ${esc(c.who)} (demo)</small></li>`).join('');
+      return `<li class="card helper"><div class="hrow"><b>${esc(h.name)}</b> ${h.demo ? '<span class="tag">demo</span>' : ''} ${chip(h.st)}</div>
+        <small>${h.services.map(id => cat(id).icon + ' ' + cat(id).title).join(' · ') || 'Services not set yet'} · about ${fmtDist(Math.round(h.d / 100) * 100)} away</small>
+        ${topTags(h.st)}${h.bio ? `<small>${esc(h.bio)}</small>` : ''}
+        <details><summary>See reviews</summary><ul class="reviews">${real + seeded || '<li class="hint">No reviews yet.</li>'}</ul></details></li>`;
+    }).join('');
+    return `<section class="card"><h2>Helpers near you</h2><p class="hint">Sorted by rating. Distances are approximate. Ratings come from seniors after finished visits.</p><ul class="plain">${items}</ul></section>`;
+  }
+  function reviewForm(r) {
+    const mode = role(), tags = mode === 'senior' ? HELPER_TAGS : SENIOR_TAGS, who = mode === 'senior' ? (r.helper || 'your helper') : (r.ownerName || 'the senior');
+    return `<form class="rv" data-rv="${r.id}" novalidate><fieldset><legend>How was your visit with ${esc(who)}?</legend>
+      <div class="starpick" role="radiogroup" aria-label="Star rating">${[5, 4, 3, 2, 1].map(n => `<input type="radio" id="st${n}-${r.id}" name="stars" value="${n}"><label for="st${n}-${r.id}" title="${n} star${n > 1 ? 's' : ''}"><span aria-hidden="true">★</span><span class="sr">${n} star${n > 1 ? 's' : ''}</span></label>`).join('')}</div>
+      <div class="tagpick">${tags.map(t => `<label class="chip"><input type="checkbox" name="tags" value="${esc(t)}"> ${esc(t)}</label>`).join('')}</div>
+      <label>Comment <small>Optional. About the visit only; please leave out health details, addresses and phone numbers.</small><textarea name="text" maxlength="200" rows="2"></textarea></label>
+      <p class="err" id="rvErr-${r.id}" role="alert"></p><button class="btn">Submit review</button></fieldset></form>`;
+  }
   const fmtTime = ts => new Date(ts).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 
   const initials = (name, fallback) => (String(name || fallback || '?').trim().split(/\s+/).map(s => s[0]).slice(0, 2).join('') || '?').toUpperCase();
@@ -151,19 +224,30 @@
     if (r.notes) lines.push(`<span>${esc(r.notes)}</span>`);
     if (mode === 'helper' && r.status === 'open') lines.push(`<small>About ${fmtDist(dist(helperSelf(), jitter(r.id, reqPos(r), 400)))} away (approximate area)${r.demo ? ' · demo' : ''}</small>`);
     if (mode === 'helper' && r.status !== 'open' && r.ownerName) lines.push(`<small>For ${esc(r.ownerName)}</small>`);
-    lines.push(`<small>${STATUS_LABEL[r.status]}${r.helper ? ' · ' + esc(r.helper) : ''}${r.rating ? ' · ' + stars(r.rating) : ''}</small>`);
+    lines.push(`<small>${STATUS_LABEL[r.status]}${r.helper ? ' · ' + esc(r.helper) : ''}</small>`);
+    if (mode === 'helper') { const st = stats('senior', r.ownerId || 'guest'); lines.push(`<small>Requester: ${chip(st)} ${st.top.map(esc).join(' · ')}</small>`); }
+    else if (r.helperId) { const st = stats('helper', r.helperId); lines.push(`<small>Helper: ${chip(st)} ${st.top.map(esc).join(' · ')}</small>`); }
     let actions = '';
     if (mode === 'senior') {
       if (r.status === 'open') actions = `<button class="btn ghost" data-cancel="${r.id}">Cancel</button><button class="btn sm ghost" data-sim="${r.id}">Demo: a helper accepts</button>`;
       if (r.status === 'accepted') actions = `<div class="code" aria-label="Safety code">Your safety code: <b>${esc(r.code)}</b><small>Only let the helper in if they tell you this code.</small></div><button class="btn ghost" data-cancel="${r.id}">Cancel</button>`;
       if (r.status === 'arrived') actions = `<p class="hint">If you feel unsafe, use the Safety tab.</p>`;
-      if (r.status === 'done' && !r.rating) actions = `<div class="rate">Rate your helper: ${[1, 2, 3, 4, 5].map(n => `<button class="star" data-rate="${r.id}:${n}" aria-label="${n} stars">★</button>`).join('')}</div>`;
     } else {
       if (r.status === 'open') actions = `<button class="btn" data-accept="${r.id}">Accept</button>`;
       if (r.status === 'accepted') actions = `<label>Ask the senior for their safety code
         <input inputmode="numeric" maxlength="4" id="code-${r.id}" placeholder="4-digit code"></label>
         <button class="btn" data-checkin="${r.id}">Check in</button><small id="err-${r.id}" class="err"></small>`;
       if (r.status === 'arrived') actions = `<button class="btn" data-finish="${r.id}">Mark finished</button>`;
+    }
+    if (r.status === 'done' && r.helperId && (mode === 'senior' ? isMineAsSenior(r) : isMineAsHelper(r))) {
+      const other = mode === 'senior' ? 'helper' : 'senior';
+      const mine = (r.reviews || {})[mode] || (mode === 'senior' && r.rating ? { stars: r.rating } : null), theirs = (r.reviews || {})[other];
+      if (!mine) actions += reviewForm(r);
+      else {
+        actions += `<p>You rated ${mode === 'senior' ? esc(r.helper || 'your helper') : esc(r.ownerName || 'the senior')}: ${starsRow(mine.stars)}</p>`;
+        if (theirs) actions += `<p>They rated you: ${starsRow(theirs.stars)}${theirs.text ? ` <i>“${esc(theirs.text)}”</i>` : ''}</p>`;
+        else actions += '<p class="hint">Their review appears here once they submit it.</p>';
+      }
     }
     if (canChat(r)) {
       const n = unread(r);
@@ -260,6 +344,7 @@
     <section class="card"><h2>Edit profile</h2>
       <form id="meForm" novalidate>${common}${r === 'senior' ? seniorFields : helperFields}<button class="btn">Save changes</button></form>
     </section>
+    ${myReviewsCard()}
     ${a ? `
     <section class="card"><h2>Change password</h2>
       <form id="pwForm" novalidate>
@@ -275,6 +360,15 @@
     <section class="card"><button class="btn ghost" id="logout">${a ? 'Log out' : 'Leave guest mode'}</button>
       ${a ? '<button class="btn ghost danger" id="delAcct">Delete my account</button>' : ''}</section>
     <section class="card"><details><summary><b>About this draft</b></summary>${aboutText()}</details></section>`;
+  }
+
+  function myReviewsCard() {
+    const subj = role(), st = stats(subj, cid());
+    const rows = st.list.map(rv => `<li>${starsRow(rv.stars)} ${rv.text ? esc(rv.text) : '<i>No comment</i>'} <small>— ${esc(rv.byName || (subj === 'helper' ? 'A senior' : 'A helper'))}, ${esc(new Date(rv.ts).toLocaleDateString())}</small></li>`).join('');
+    return `<section class="card"><h2>Reviews about me</h2>
+      <p>${chip(st)} ${topTags(st)}</p>
+      <ul class="reviews">${rows || '<li class="hint">No reviews yet. After a finished visit, the other person can review you and you can review them.</li>'}</ul>
+      <p class="hint">Reviews come only from finished visits. Each person gets one review per visit, and a review stays hidden from the other person until both have submitted theirs.</p></section>`;
   }
 
   const views = {
@@ -295,7 +389,8 @@
           <p class="hint">Please don't write passwords, bank details or health records here.</p>
           <button class="btn big">Send my request</button>
           <button type="button" class="btn ghost" id="cancelDraft">Never mind</button>
-        </form></section>` : ''}`;
+        </form></section>` : ''}
+      ${helpersCard()}`;
     },
     'senior:mine'() {
       const list = state.requests.filter(isMineAsSenior).sort((a, b) => b.created - a.created);
@@ -349,7 +444,8 @@
       <ul class="hint">
         <li>Open requests show only a <b>rough area</b> to helpers — never an exact address.</li>
         <li>Exact positions are shared <b>only between the two people on a visit</b>, from acceptance until it ends.</li>
-        <li>Demo: the other people on this map are simulated.</li></ul></section>`;
+        <li>Demo: the other people on this map are simulated.</li></ul></section>
+    ${r === 'senior' ? helpersCard() : ''}`;
   }
 
   function aboutText() {
@@ -540,7 +636,13 @@
   function doDelete() {
     const a = acct(); if (!a) return;
     if (!confirm('Delete your account and its requests from this device? This cannot be undone.')) return;
-    state.requests = state.requests.filter(r => r.ownerId !== a.id);
+    // Finished, reviewed visits are kept (anonymised) so the other person keeps the reviews they earned.
+    state.requests = state.requests.filter(r => {
+      if (r.ownerId !== a.id) return true;
+      if (r.status === 'done' && r.reviews) { delete r.chat; delete r.chatRead; delete r.notes; delete r.pos; r.ownerId = 'deleted'; r.ownerName = ''; return true; }
+      return false;
+    });
+    state.requests.forEach(r => { if (r.helperId === a.id && r.status === 'done') { delete r.chat; delete r.chatRead; r.helperId = 'deleted'; r.helper = 'Former helper'; } });
     state.requests.forEach(r => { if (r.helperId === a.id && (r.status === 'accepted' || r.status === 'arrived')) { r.status = 'open'; delete r.helper; delete r.helperId; delete r.helperPos; delete r.code; delete r.chat; delete r.chatRead; } });
     state.accounts = state.accounts.filter(x => x.id !== a.id);
     doLogout(); toast('Account deleted');
@@ -616,8 +718,20 @@
     v.querySelectorAll('[data-sim]').forEach(b => b.addEventListener('click', () => {
       const r = byId(b.dataset.sim); if (!r) return; r.status = 'accepted'; r.helper = 'Demo helper'; r.helperId = 'demo'; r.code = newCode(); startHelper(r); save(); render();
     }));
-    v.querySelectorAll('[data-rate]').forEach(b => b.addEventListener('click', () => {
-      const [id, n] = b.dataset.rate.split(':'); const r = byId(id); if (r) { r.rating = +n; save(); toast('Thank you!'); render(); }
+    v.querySelectorAll('form.rv').forEach(f => f.addEventListener('submit', e => {
+      e.preventDefault();
+      const id = f.dataset.rv, r = byId(id); if (!r || r.status !== 'done') return;
+      const mode = role(); if (mode === 'senior' ? !isMineAsSenior(r) : !isMineAsHelper(r)) return;
+      if ((r.reviews || {})[mode]) return;
+      const fd = new FormData(f), starsV = parseInt(fd.get('stars'), 10), text = (fd.get('text') || '').trim().slice(0, 200), err = $(`#rvErr-${id}`, v);
+      if (!(starsV >= 1 && starsV <= 5)) { err.textContent = 'Please choose a star rating.'; return; }
+      if ((SENSITIVE.test(text) || CONTACT_LIKE.test(text)) && f.dataset.warned !== '1') {
+        f.dataset.warned = '1'; err.textContent = 'Your comment may include a phone number, link, email or private details. Please remove them, or tap Submit again if you are sure.'; return;
+      }
+      const allowed = mode === 'senior' ? HELPER_TAGS : SENIOR_TAGS;
+      const tags = fd.getAll('tags').filter(t => allowed.includes(t)).slice(0, 5);
+      (r.reviews = r.reviews || {})[mode] = { stars: starsV, tags, text, ts: Date.now(), by: cid(), byName: firstName(profile().name) };
+      save(); toast('Thank you for your review'); render();
     }));
     v.querySelectorAll('[data-accept]').forEach(b => b.addEventListener('click', () => {
       const r = byId(b.dataset.accept); if (!r || r.status !== 'open') return;

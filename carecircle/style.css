@@ -92,3 +92,21 @@ p.err:empty{display:none}
 .badge{display:inline-block;background:#dc2626;color:#fff;border-radius:999px;font-size:.72rem;font-style:normal;padding:0 7px;margin-left:4px;vertical-align:middle;line-height:1.5}
 nav button span{position:relative}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+
+/* reviews */
+.rating{font-weight:700;color:#b45309;white-space:nowrap}
+.rating small{color:var(--mute);font-weight:500}
+.rating.new{font-weight:600;color:var(--mute)}
+.stars{color:#d97706;letter-spacing:1px}
+.helper .hrow{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.reviews{list-style:none;margin:8px 0 0;padding:0}
+.reviews li{padding:8px 0;border-top:1px solid var(--line)}
+form.rv fieldset{border:2px solid var(--line);border-radius:14px;padding:12px;margin:10px 0 0}
+.starpick{display:inline-flex;flex-direction:row-reverse;position:relative}
+.starpick input{position:absolute;opacity:0;width:1px;height:1px}
+.starpick label{font-size:2.4rem;line-height:1;color:#cbd5d1;cursor:pointer;padding:0 3px;margin:0}
+.starpick input:checked~label,.starpick label:hover,.starpick label:hover~label{color:#d97706}
+.starpick input:focus-visible+label{outline:3px solid #f59e0b;border-radius:6px}
+.tagpick{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.tagpick .chip{display:inline-flex;align-items:center;gap:6px;margin:0;font-weight:500}
+.tagpick .chip input{width:18px;height:18px;margin:0}

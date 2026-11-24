@@ -71,5 +71,17 @@ The prototype stores messages inside the request and simulates replies from demo
 - **Family visibility:** optionally let a trusted family member see that a chat exists and the visit details — not necessarily the content — unless the senior opts in.
 - **Accessibility:** large text, quick-reply chips, optional voice-to-text; read messages aloud for visually impaired seniors.
 
+## Two-way reviews and reputation
+The prototype stores reviews on the finished request and computes plain averages on the device. A real version:
+- **Eligibility:** only the two participants of a *completed* visit (safety-code check-in + finish) can review, once each, within a time window (e.g. 14 days). No reviews for cancelled or never-started visits.
+- **Blind reveal:** each side's review is hidden until both have submitted (or the window closes) to reduce retaliation and "review-for-review" bargaining.
+- **Scoring:** show the average with the count; rank with a Bayesian/shrunk average (e.g. `(C*m + sum) / (C + n)`) so one 5-star review doesn't outrank 30 good ones. Weight recent visits more; surface "New helper" instead of a number when there are fewer than ~3 reviews.
+- **Structured tags** (on time, kind & patient, respectful, safe meeting place...) are shown as aggregates; they are safer and more useful than free text.
+- **Free-text comments:** length-capped, scanned for phone numbers, links, addresses, health details and abuse; shown to the other party and, for helpers, to prospective seniors. Seniors' free-text reviews should be visible only to the reviewed party and moderators by default.
+- **Fairness and abuse:** detect review rings (same pairs repeatedly), brand-new accounts, and rating spikes; let people flag a review and appeal; moderators can remove reviews that break the rules. Low ratings, or reports in chat, trigger an internal safety review rather than only a public number.
+- **Account deletion:** keep the *anonymised* review so people don't lose a reputation they earned; remove names and any personal text.
+- **Fair-treatment guardrails:** never show reviews as a way to discriminate on health, age, disability, language or origin; review prompts should ask about conduct (punctuality, respect, safety), not personal characteristics.
+- **Verification link:** pair ratings with verified status (ID check, background check, training) on helper profiles; ratings alone are not a safety check.
+
 ## Notifications
 Push (FCM / Web Push) for new nearby requests, helper accepted, helper arriving, visit finished; SMS fallback for seniors without smartphones.
