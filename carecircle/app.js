@@ -47,6 +47,11 @@
   const cid = () => acct() ? acct().id : 'guest';
   const profile = () => acct() ? acct().profile : (state.role === 'senior' ? state.senior : state.helper);
   if (state.session && state.session !== 'guest' && !acct()) { state.session = null; }
+  // An account can use CareCircle as a senior, as a helper, or both. `role` is the mode currently active.
+  const rolesOf = a => (a.roles && a.roles.length ? a.roles : [a.role]);
+  state.accounts.forEach(a => { a.roles = rolesOf(a); });
+  // Open requests a helper may see: never your own (guest demo mode excepted).
+  const openForMe = r => r.status === 'open' && (isGuest() || (r.ownerId || 'guest') !== cid());
 
   // ---------------- password hashing (WebCrypto PBKDF2) ----------------
   const b64e = buf => btoa(String.fromCharCode(...new Uint8Array(buf)));
@@ -124,6 +129,7 @@
   let draftCat = null;
   let authTab = 'login';
   let authMsg = '';
+  let authRole = 'senior', authRoleTouched = false; // what the top buttons mean on the sign-in screen
   let chatId = null;      // request whose chat is open
   let chatWarned = false; // first send of a "sensitive-looking" message only warns
 
@@ -184,7 +190,7 @@
 
   function nearbyHelpers() {
     const list = [];
-    state.accounts.filter(a => a.role === 'helper').forEach((a, i) => {
+    state.accounts.filter(a => rolesOf(a).includes('helper') && a.id !== cid()).forEach((a, i) => {
       const pos = jitter(a.id, offset(me, 900 + i * 350, 20 + i * 80), 300);
       list.push({ id: a.id, name: a.profile.name || 'Helper', services: a.profile.services || [], bio: a.profile.bio || '', demo: false, d: dist(me, pos) });
     });
@@ -297,8 +303,8 @@
       </form>` : `
       <form id="regForm" novalidate>
         <fieldset class="roles2"><legend>I want to…</legend>
-          <label class="rolecard"><input type="radio" name="role" value="senior" checked><span><b>🙋 Get help</b><small>I'm a senior or a family member</small></span></label>
-          <label class="rolecard"><input type="radio" name="role" value="helper"><span><b>🤝 Be a helper</b><small>I can chat, shop or keep company</small></span></label>
+          <label class="rolecard"><input type="radio" name="role" value="senior" ${authRole === 'senior' ? 'checked' : ''}><span><b>🙋 Get help</b><small>I'm a senior or a family member</small></span></label>
+          <label class="rolecard"><input type="radio" name="role" value="helper" ${authRole === 'helper' ? 'checked' : ''}><span><b>🤝 Be a helper</b><small>I can chat, shop or keep company</small></span></label>
         </fieldset>
         <label>Your name<input name="name" maxlength="40" autocomplete="name" required></label>
         <label>Email<input name="email" type="email" autocomplete="username" required></label>
@@ -413,7 +419,7 @@
     },
     // ---------- helper ----------
     'helper:jobs'() {
-      const open = state.requests.filter(r => r.status === 'open');
+      const open = state.requests.filter(openForMe);
       return `<h2 class="pad">Requests near you <span class="tag">demo</span></h2>
         <ul class="plain">${open.map(r => reqCard(r, 'helper')).join('') || '<li class="card hint">No open requests. Open the Map tab and tap “Add demo requests”, or log in as a senior and post one.</li>'}</ul>`;
     },
@@ -497,7 +503,7 @@
         line = [self, reqPos(job)];
         info = job.status === 'arrived' ? 'You have checked in.' : d <= 30 ? 'You are at the door. Ask for the safety code.' : `Person you are helping is ${fmtDist(d)} away — about ${etaMin(d)} min.`;
       } else {
-        const open = state.requests.filter(r => r.status === 'open');
+        const open = state.requests.filter(openForMe);
         open.forEach(r => items.push({ pos: jitter(r.id, reqPos(r), 400), kind: 'area', label: `${cat(r.category).title} request (approx. area)`, radius: 400 }));
         info = open.length ? `${open.length} open request${open.length > 1 ? 's' : ''} nearby. Exact addresses are shown only after you accept.` : 'No open requests. Tap “Add demo requests” to see how it looks.';
       }
@@ -554,8 +560,10 @@
     destroyMap();
     document.body.classList.toggle('big', !!state.big);
     const guest = isGuest();
-    $('.roles').hidden = !guest;
+    $('.roles').hidden = false;
     if (!loggedIn()) {
+      $('#roleSenior').setAttribute('aria-pressed', authRole === 'senior');
+      $('#roleHelper').setAttribute('aria-pressed', authRole === 'helper');
       $('#view').innerHTML = authView();
       $('nav').innerHTML = ''; $('nav').hidden = true;
       bind(); return;
@@ -594,7 +602,7 @@
     try {
       const salt = newSalt(), h = await hashPw(pw, salt);
       const profile = rl === 'senior' ? { name, emergencyName: '', emergencyPhone: '' } : { name, services: ['chat', 'shopping', 'company'] };
-      const a = { id: uid(), email, role: rl, salt, hash: h, created: Date.now(), profile };
+      const a = { id: uid(), email, role: rl, roles: [rl], salt, hash: h, created: Date.now(), profile };
       state.accounts.push(a); state.session = a.id; save();
       authMsg = ''; draftCat = null; tab = { senior: 'home', helper: 'jobs' };
       toast(`Welcome, ${name.split(' ')[0]}!`); render();
@@ -610,7 +618,9 @@
     try {
       const h = await hashPw(pw, a ? a.salt : newSalt()); // always hash, so timing doesn't reveal if the email exists
       if (a && safeEq(h, a.hash)) {
-        delete fails[email]; state.session = a.id; save();
+        delete fails[email]; state.session = a.id;
+        if (authRoleTouched && rolesOf(a).includes(authRole)) a.role = authRole;
+        save();
         authMsg = ''; draftCat = null; tab = { senior: 'home', helper: 'jobs' }; render(); return;
       }
     } catch (e) { return setAuthMsg(e.message === 'secure-context' ? 'This browser needs a secure (https) connection to log in.' : 'Something went wrong. Please try again.'); }
@@ -619,7 +629,7 @@
     setAuthMsg('Email or password is incorrect.');
   }
   function doLogout() {
-    stopGeo(); state.share = false; state.session = null; draftCat = null; chatId = null; authMsg = ''; authTab = 'login';
+    stopGeo(); state.share = false; state.session = null; draftCat = null; chatId = null; authMsg = ''; authTab = 'login'; authRole = 'senior'; authRoleTouched = false; tab = { senior: 'home', helper: 'jobs' };
     save(); render();
   }
   async function doChangePw(form) {
@@ -677,7 +687,7 @@
     v.querySelectorAll('[data-auth]').forEach(b => b.addEventListener('click', () => { authTab = b.dataset.auth; authMsg = ''; render(); }));
     $('#loginForm', v)?.addEventListener('submit', e => { e.preventDefault(); doLogin(e.target); });
     $('#regForm', v)?.addEventListener('submit', e => { e.preventDefault(); doRegister(e.target); });
-    $('#guestBtn', v)?.addEventListener('click', () => { state.session = 'guest'; save(); render(); });
+    $('#guestBtn', v)?.addEventListener('click', () => { state.session = 'guest'; state.role = authRole; tab = { senior: 'home', helper: 'jobs' }; save(); render(); });
     v.querySelectorAll('#showPw').forEach(c => c.addEventListener('change', () => v.querySelectorAll('[data-pw]').forEach(i => { i.type = c.checked ? 'text' : 'password'; })));
     // ----- me -----
     $('#logout', v)?.addEventListener('click', doLogout);
@@ -735,6 +745,7 @@
     }));
     v.querySelectorAll('[data-accept]').forEach(b => b.addEventListener('click', () => {
       const r = byId(b.dataset.accept); if (!r || r.status !== 'open') return;
+      if (!isGuest() && (r.ownerId || 'guest') === cid()) { toast('You can\'t accept your own request.'); return; }
       r.status = 'accepted'; r.helper = profile().name || 'Helper'; r.helperId = cid(); r.code = newCode(); startHelper(r); save(); tab.helper = 'mine'; toast('Accepted — ask the senior for their code'); render();
     }));
     v.querySelectorAll('[data-checkin]').forEach(b => b.addEventListener('click', () => {
@@ -764,8 +775,20 @@
   }
 
   $('nav').addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (!b) return; tab[role()] = b.dataset.tab; render(); window.scrollTo(0, 0); });
-  $('#roleSenior').addEventListener('click', () => { state.role = 'senior'; save(); render(); });
-  $('#roleHelper').addEventListener('click', () => { state.role = 'helper'; save(); render(); });
+  function switchMode(target) {
+    if (!loggedIn()) { authRole = target; authRoleTouched = true; render(); return; }       // sign-in screen: pick which side you are joining
+    const a = acct();
+    if (!a) { state.role = target; chatId = null; draftCat = null; save(); render(); return; } // guest demo
+    if (role() === target) return;
+    if (!rolesOf(a).includes(target)) {
+      const label = target === 'helper' ? 'helper' : 'senior (get help)';
+      if (!confirm(`Add ${label} mode to your account?\n\nYou can switch between modes any time. You'll be asked to fill in your ${target === 'helper' ? 'helper' : 'senior'} details on the Me tab.${target === 'helper' ? '\n\nIn a real launch, helpers must pass ID and background checks first.' : ''}`)) return;
+      a.roles = rolesOf(a).concat(target); tab[target] = 'me'; toast(`${target === 'helper' ? 'Helper' : 'Senior'} mode added`);
+    }
+    a.role = target; chatId = null; draftCat = null; save(); render(); window.scrollTo(0, 0);
+  }
+  $('#roleSenior').addEventListener('click', () => switchMode('senior'));
+  $('#roleHelper').addEventListener('click', () => switchMode('helper'));
   $('#bigText').addEventListener('click', () => { state.big = !state.big; save(); render(); });
 
   let deferred;
