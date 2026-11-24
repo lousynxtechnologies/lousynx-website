@@ -34,7 +34,7 @@ At Lousynx Technologies, our mission is to merge innovation with practicality �
 
 **Lousynx Technologies Inc.**  
 Markham, Ontario, Canada  
-✉️ Email: [info@lousynx.com](mailto:info@lousynx.com)  
+✉️ Email: [lousynxtechnologies@gmail.com](mailto:lousynxtechnologies@gmail.com)  
 🌍 Website: [www.lousynx.com](http://www.lousynx.com)
 
 ---
