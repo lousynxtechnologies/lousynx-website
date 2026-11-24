@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#4f46e5">
+<title>GuildPool (Draft)</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="appbody">
+<header class="top">
+  <strong>🎮 GuildPool</strong><span class="tag warn">DRAFT</span>
+  <button id="install" class="btn sm" hidden>Install</button>
+</header>
+<main id="view" aria-live="polite"></main>
+<div id="toast" role="status" hidden></div>
+<nav aria-label="Main">
+  <button data-tab="home">Home</button>
+  <button data-tab="log">Log</button>
+  <button data-tab="seasons">Seasons</button>
+  <button data-tab="team">Team up</button>
+  <button data-tab="rewards">Rewards</button>
+  <button data-tab="about">About</button>
+</nav>
+<script src="app.js"></script>
+</body>
+</html>

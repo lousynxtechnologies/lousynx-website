@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#4f46e5">
+<title>GuildPool (Draft) — Lousynx</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+  <section class="hero">
+    <img src="icon-192.png" width="96" height="96" alt="GuildPool icon">
+    <h1>GuildPool <span class="tag warn">DRAFT</span></h1>
+    <p>Reputation, seasonal challenges and play-with-me for gaming communities — rewards come from sponsors, in kind. No cash payouts.</p>
+    <div class="btnrow">
+      <a class="btn" href="app.html">Open the app</a>
+      <button id="install" class="btn ghost" hidden>Install on this device</button>
+      <a class="btn ghost" href="guildpool-draft-source.zip" download>Download source (.zip)</a>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Install on Android</h2>
+    <ol>
+      <li>Open <b>Open the app</b> in Chrome.</li>
+      <li>Tap <b>⋮ → Install app</b> (or “Add to Home screen”).</li>
+      <li>It launches full-screen like a normal app and works offline.</li>
+    </ol>
+    <p class="hint">iPhone: Share → Add to Home Screen. This draft is a web app (PWA), not a Play Store APK.</p>
+  </section>
+
+  <section class="card">
+    <h2>What's in the draft</h2>
+    <ul>
+      <li>Playtime and achievement logging → reputation points</li>
+      <li>Monthly sponsor “seasons” (e.g. 50h of FPS → share a prize pool)</li>
+      <li>Play-with-me: time-rich players help time-poor players (co-op only)</li>
+      <li>Sponsor in-kind reward redemption</li>
+    </ul>
+  </section>
+
+  <section class="card warnbox">
+    <h2>Read before using</h2>
+    <ul>
+      <li>Prototype only: data stays on your device; sponsors and prizes are placeholders.</li>
+      <li>Points have no cash value and can't be bought, sold or withdrawn.</li>
+      <li>Game-account connectors (Steam, Riot, PSN, Nintendo) are not built yet. They'd be opt-in and use official APIs, not Accessibility Service.</li>
+      <li>Not legal advice. Prize pools and rewards can fall under gambling, money-transmission, consumer and tax rules depending on where you operate. Get legal review before a real launch.</li>
+    </ul>
+  </section>
+  <p class="hint" style="text-align:center"><a href="../">← Back to lousynx.com</a></p>
+</main>
+<script>
+let d;addEventListener('beforeinstallprompt',e=>{e.preventDefault();d=e;const b=document.getElementById('install');b.hidden=false;b.onclick=async()=>{d.prompt();await d.userChoice;b.hidden=true}});
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+</script>
+</body>
+</html>
