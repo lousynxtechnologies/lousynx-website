@@ -251,10 +251,34 @@
             overflow: hidden;
             border: 1px solid rgba(0,0,0,0.05);
             text-align: center;
-            height: 280px;
+            min-height: 330px;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
+            text-decoration: none;
+            color: inherit;
+        }
+        
+        .service-more {
+            display: inline-block;
+            margin-top: 14px;
+            color: var(--primary);
+            font-weight: 600;
+            font-size: 15px;
+        }
+        
+        .service-card:hover .service-more i {
+            transform: translateX(4px);
+        }
+        
+        .service-more i {
+            transition: transform 0.3s;
+            margin-left: 4px;
+        }
+        
+        .service-card:focus-visible {
+            outline: 3px solid var(--accent);
+            outline-offset: 3px;
         }
         
         .service-card::before {
@@ -689,50 +713,56 @@
                 <p>We combine technical expertise with strategic insight to deliver comprehensive solutions for your business</p>
             </div>
             <div class="services-grid">
-                  <div class="service-card">
+                  <a class="service-card" href="services/ai-analytics.html" aria-label="AI-Empowered Analytics: learn more">
                     <div class="service-icon">
                         <i class="fas fa-brain"></i>
                     </div>
                     <h3>AI-Empowered Analytics</h3>
                     <p>Leverage AI and data analytics to gain insights and drive informed decision-making.</p>
-                </div>               
+                    <span class="service-more">Learn more <i class="fas fa-arrow-right" aria-hidden="true"></i></span>
+                </a>               
 
-                <div class="service-card">
+                <a class="service-card" href="services/digital-transformation.html" aria-label="Digital Transformation: learn more">
                     <div class="service-icon">
                         <i class="fas fa-code"></i>
                     </div>
                     <h3>Digital Transformation</h3>
                     <p>Custom software solutions and applications tailored to your specific business needs.</p>
-                </div>
-                <div class="service-card">
+                    <span class="service-more">Learn more <i class="fas fa-arrow-right" aria-hidden="true"></i></span>
+                </a>
+                <a class="service-card" href="services/process-automation.html" aria-label="Business Process Automation: learn more">
                     <div class="service-icon">
                         <i class="fas fa-cogs"></i>
                     </div>
                     <h3>Business Process Automation</h3>
                     <p>Streamline operations and reduce manual intervention through intelligent automation.</p>
-                </div>
+                    <span class="service-more">Learn more <i class="fas fa-arrow-right" aria-hidden="true"></i></span>
+                </a>
                
-                <div class="service-card">
+                <a class="service-card" href="services/smart-tourism.html" aria-label="Smart Tourism Design: learn more">
                     <div class="service-icon">
                         <i class="fas fa-map-marked-alt"></i>
                     </div>
                     <h3>Smart Tourism Design</h3>
                     <p>Innovative solutions for tourism, including digital experiences and destination planning.</p>
-                </div>
-                <div class="service-card">
+                    <span class="service-more">Learn more <i class="fas fa-arrow-right" aria-hidden="true"></i></span>
+                </a>
+                <a class="service-card" href="services/educational-travel.html" aria-label="Educational Travel Planning: learn more">
                     <div class="service-icon">
                         <i class="fas fa-graduation-cap"></i>
                     </div>
                     <h3>Educational Travel Planning</h3>
                     <p>Designing meaningful international learning experiences combining education and culture.</p>
-                </div>
-                <div class="service-card">
+                    <span class="service-more">Learn more <i class="fas fa-arrow-right" aria-hidden="true"></i></span>
+                </a>
+                <a class="service-card" href="services/travel-insurance.html" aria-label="Innovative Travel Insurance: learn more">
                     <div class="service-icon">
                         <i class="fas fa-shield-alt"></i>
                     </div>
                     <h3>Innovative Travel Insurance</h3>
                     <p>Technology-driven insurance products leveraging data and emerging technologies.</p>
-                </div>
+                    <span class="service-more">Learn more <i class="fas fa-arrow-right" aria-hidden="true"></i></span>
+                </a>
             </div>
         </div>
     </section>
@@ -849,12 +879,12 @@
                 <div class="footer-column">
                     <h3>Services</h3>
                     <ul>
-                        <li><a href="#">AI Emplowered Analytics</a></li>
-                       <li><a href="#">Digital Transformation</a></li>
-                        <li><a href="#">Business Process Automation</a></li>                        
-                        <li><a href="#">Smart Tourism</a></li>
-                        <li><a href="#">Educational Travel</a></li>
-                        <li><a href="#">Travel Insurance</a></li>
+                        <li><a href="services/ai-analytics.html">AI-Empowered Analytics</a></li>
+                       <li><a href="services/digital-transformation.html">Digital Transformation</a></li>
+                        <li><a href="services/process-automation.html">Business Process Automation</a></li>                        
+                        <li><a href="services/smart-tourism.html">Smart Tourism Design</a></li>
+                        <li><a href="services/educational-travel.html">Educational Travel Planning</a></li>
+                        <li><a href="services/travel-insurance.html">Innovative Travel Insurance</a></li>
                     </ul>
                 </div>
                 <div class="footer-column">
