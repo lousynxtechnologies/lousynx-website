@@ -4,7 +4,7 @@
 (function () {
   'use strict';
   // Set to the Google Apps Script Web App URL (ends with /exec). Empty = tracking switched off.
-  var ENDPOINT = '';
+  var ENDPOINT = 'https://script.google.com/macros/s/AKfycbztILGxOsh1SCClD-t0I6vNe3H8EWelhfT6pyIWjDGbMBzdf6P450X04MHtK6h606wH/exec';
   var APPS = { guildpool: 1, carecircle: 1, wayly: 1 };
   var ACTS = { 'try': 1, android: 1, ios: 1, 'open-android': 1, 'open-ios': 1 };
 
