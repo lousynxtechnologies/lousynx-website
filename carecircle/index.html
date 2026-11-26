@@ -21,9 +21,9 @@
     <h1>CareCircle <span class="tag warn">DRAFT</span></h1>
     <p>Help for everyday life, on request. Seniors post what they need — chatting, shopping, companionship — and a helper nearby accepts. Like a ride-hailing app, but for care and company.</p>
     <div class="btnrow three">
-      <a class="btn" href="app.html">▶ Try the App</a>
-      <a class="btn ghost dl" id="dl-android" href="../downloads/CareCircle.apk" download>🤖 Download for Android</a>
-      <a class="btn ghost dl" id="dl-ios" href="../downloads/CareCircle.mobileconfig">🍎 Download for iPhone</a>
+      <a class="btn" href="app.html" data-track="try" data-app="carecircle" data-src="page">▶ Try the App</a>
+      <a class="btn ghost dl" id="dl-android" href="../downloads/CareCircle.apk" download data-track="android" data-app="carecircle" data-src="page">🤖 Download for Android</a>
+      <a class="btn ghost dl" id="dl-ios" href="../downloads/CareCircle.mobileconfig" data-track="ios" data-app="carecircle" data-src="page">🍎 Download for iPhone</a>
     </div>
     <p class="hint">Free draft prototype · works in any browser, or install it on your phone.</p>
   </section>
@@ -66,11 +66,13 @@
       <li>Not legal advice. Rules for in-home visits and vulnerable people differ by region.</li>
     </ul>
   </section>
+  <p class="hint" style="text-align:center">We count clicks on these buttons anonymously (no cookies, no personal data) to see which apps people use.</p>
   <p class="hint" style="text-align:center"><a href="../">← Back to lousynx.com</a></p>
 </main>
 <script>
 document.body.dataset.os=/android/i.test(navigator.userAgent)?"android":(/iphone|ipad|ipod/i.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1))?"ios":"other";
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
 </script>
+<script src="../track.js" defer></script>
 </body>
 </html>

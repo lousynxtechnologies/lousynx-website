@@ -21,9 +21,9 @@
     <h1>GuildPool <span class="tag warn">DRAFT</span></h1>
     <p>Reputation, seasonal challenges and play-with-me for gaming communities — rewards come from sponsors, in kind. No cash payouts.</p>
     <div class="btnrow three">
-      <a class="btn" href="app.html">▶ Try the App</a>
-      <a class="btn ghost dl" id="dl-android" href="../downloads/GuildPool.apk" download>🤖 Download for Android</a>
-      <a class="btn ghost dl" id="dl-ios" href="../downloads/GuildPool.mobileconfig">🍎 Download for iPhone</a>
+      <a class="btn" href="app.html" data-track="try" data-app="guildpool" data-src="page">▶ Try the App</a>
+      <a class="btn ghost dl" id="dl-android" href="../downloads/GuildPool.apk" download data-track="android" data-app="guildpool" data-src="page">🤖 Download for Android</a>
+      <a class="btn ghost dl" id="dl-ios" href="../downloads/GuildPool.mobileconfig" data-track="ios" data-app="guildpool" data-src="page">🍎 Download for iPhone</a>
     </div>
     <p class="hint">Free draft prototype · works in any browser, or install it on your phone.</p>
   </section>
@@ -61,11 +61,13 @@
       <li>Not legal advice. Prize pools and rewards can fall under gambling, money-transmission, consumer and tax rules depending on where you operate. Get legal review before a real launch.</li>
     </ul>
   </section>
+  <p class="hint" style="text-align:center">We count clicks on these buttons anonymously (no cookies, no personal data) to see which apps people use.</p>
   <p class="hint" style="text-align:center"><a href="../">← Back to lousynx.com</a></p>
 </main>
 <script>
 document.body.dataset.os=/android/i.test(navigator.userAgent)?"android":(/iphone|ipad|ipod/i.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1))?"ios":"other";
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
 </script>
+<script src="../track.js" defer></script>
 </body>
 </html>
