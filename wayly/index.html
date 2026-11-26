@@ -20,11 +20,12 @@
     <img src="icon-192.png" width="96" height="96" alt="Wayly icon">
     <h1>Wayly <span class="tag warn">DRAFT</span></h1>
     <p><b>Your AI travel concierge.</b> Plan the trip, then let Wayly walk you through it by voice: check-in reminders, a taxi when you need one, and audio-guided tours with scenic descriptions at each attraction.</p>
-    <div class="btnrow">
-      <a class="btn" href="app.html">Try the app</a>
-      <a class="btn ghost" href="#install">Install on your phone</a>
-      <button id="install" class="btn ghost" hidden>Install from this browser</button>
+    <div class="btnrow three">
+      <a class="btn" href="app.html">▶ Try the App</a>
+      <a class="btn ghost dl" id="dl-android" href="../downloads/Wayly.apk" download>🤖 Download for Android</a>
+      <a class="btn ghost dl" id="dl-ios" href="../downloads/Wayly.mobileconfig">🍎 Download for iPhone</a>
     </div>
+    <p class="hint">Free draft prototype · works in any browser, or install it on your phone.</p>
   </section>
 
   <section class="card">
@@ -39,35 +40,18 @@
     </ul>
   </section>
 
-  <section class="card" id="install">
-    <h2>Install Wayly</h2>
-    <p class="hint">Free draft prototype. Pick your device: Tip: turn your volume up for the voice features.</p>
-    <div class="install-grid">
-      <div class="inst" id="inst-android">
-        <h3>🤖 Android</h3>
-        <a class="btn big" href="../downloads/Wayly.apk" download>⬇ Download for Android (APK)</a>
-        <p class="hint">Version 1.0 · 0.4 MB · Android 6.0 or newer</p>
-        <ol>
-          <li>Tap <b>Download</b> and open <b>Wayly.apk</b> when it finishes.</li>
-          <li>If asked, allow your browser to <b>install unknown apps</b> (one-time setting).</li>
-          <li>Tap <b>Install</b>, then <b>Open</b>. Wayly appears on your home screen.</li>
-        </ol>
-        <p class="hint">This draft is not on Google Play yet, so Play Protect may show a warning. Installing is safe if you downloaded the file from lousynx.com.</p>
-        <details><summary>Verify the download</summary><p class="hint">SHA-256:<br><code class="sha">6b305ec96a87b258fc0a34232d70e73dc3f49a36d45c5cd67cad3f851aeed726</code></p></details>
-      </div>
-      <div class="inst" id="inst-ios">
-        <h3>🍎 iPhone &amp; iPad</h3>
-        <p>Apple doesn't allow apps to be installed from a website, so you add Wayly to your Home Screen from Safari. It then opens full-screen like any other app.</p>
-        <ol>
-          <li>Open <b>www.lousynx.com/wayly/app.html</b> in <b>Safari</b>.</li>
-          <li>Tap the <b>Share</b> button (the square with an arrow).</li>
-          <li>Scroll down and tap <b>Add to Home Screen</b>, then <b>Add</b>.</li>
-        </ol>
-        <a class="btn big" href="app.html">Open in Safari to install</a>
-        <p class="hint">On iPhone, some features (background notifications, voice input) are limited by iOS.</p>
-      </div>
+  <section class="card tips" id="install">
+    <h2>Install tips</h2>
+    <div class="tipgrid">
+      <div id="tip-android"><h3>🤖 Android</h3>
+        <ol><li>Tap <b>Download for Android</b>, then open <b>Wayly.apk</b>.</li>
+        <li>If asked, allow your browser to <b>install unknown apps</b>, then tap <b>Install</b>.</li></ol>
+        <p class="hint">Not on Google Play yet, so Play Protect may show a warning. Android 6.0 or newer.</p></div>
+      <div id="tip-ios"><h3>🍎 iPhone &amp; iPad</h3>
+        <ol><li>In <b>Safari</b>, tap <b>Download for iPhone</b>, then <b>Allow</b>.</li>
+        <li>Open <b>Settings</b> → <b>Profile Downloaded</b> → <b>Install</b>.</li></ol>
+        <p class="hint">iOS shows <b>“Not Verified”</b> because this draft isn't from the App Store. The profile only adds a Wayly icon to your Home Screen; remove it in Settings → General → VPN &amp; Device Management. Prefer not to? In Safari, tap <b>Share</b> → <b>Add to Home Screen</b>.</p></div>
     </div>
-    <div class="qr"><img src="qr.svg" width="132" height="132" alt="QR code that opens this page"><p><b>On a computer?</b> Scan this code with your phone's camera to open this page there.</p></div>
   </section>
 
   <section class="card warnbox">
@@ -84,7 +68,6 @@
 </main>
 <script>
 document.body.dataset.os=/android/i.test(navigator.userAgent)?"android":(/iphone|ipad|ipod/i.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1))?"ios":"other";
-let d;addEventListener('beforeinstallprompt',e=>{e.preventDefault();d=e;const b=document.getElementById('install');b.hidden=false;b.onclick=async()=>{d.prompt();await d.userChoice;b.hidden=true}});
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
 </script>
 </body>
