@@ -111,3 +111,19 @@ form.rv fieldset{border:2px solid var(--line);border-radius:14px;padding:12px;ma
 .tagpick{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
 .tagpick .chip{display:inline-flex;align-items:center;gap:6px;margin:0;font-weight:500}
 .tagpick .chip input{width:18px;height:18px;margin:0}
+
+/* install section */
+.install-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:10px}
+.inst{border:2px solid var(--line);border-radius:14px;padding:14px;background:#fff;display:flex;flex-direction:column}
+.inst h3{margin:0 0 8px}
+.inst ol{margin:8px 0 8px 20px;padding:0}.inst li{margin:4px 0}
+.inst .btn.big{margin:6px 0}
+.inst details{margin-top:auto;padding-top:6px}
+.sha{display:block;word-break:break-all;font-size:.72rem;color:#334155;background:#f1f5f9;border-radius:8px;padding:6px 8px;margin-top:4px}
+[data-os=android] #inst-android,[data-os=ios] #inst-ios{border-color:var(--brand);box-shadow:0 0 0 3px #0000000d}
+[data-os=ios] #inst-ios{order:-1}
+.qr{display:flex;gap:14px;align-items:center;margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
+.qr img{border:1px solid var(--line);border-radius:8px;background:#fff;flex:none}
+.qr p{margin:0}
+[data-os=android] .qr,[data-os=ios] .qr{display:none}
+@media (max-width:640px){.install-grid{grid-template-columns:1fr}}

@@ -6,6 +6,11 @@
 <meta name="theme-color" content="#0f766e">
 <title>CareCircle (Draft) — Lousynx</title>
 <link rel="manifest" href="manifest.webmanifest">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="CareCircle">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="style.css">
 </head>
@@ -16,19 +21,41 @@
     <h1>CareCircle <span class="tag warn">DRAFT</span></h1>
     <p>Help for everyday life, on request. Seniors post what they need — chatting, shopping, companionship — and a helper nearby accepts. Like a ride-hailing app, but for care and company.</p>
     <div class="btnrow">
-      <a class="btn" href="app.html">Open the app</a>
-      <button id="install" class="btn ghost" hidden>Install on this device</button>
-      <a class="btn ghost" href="carecircle-draft-source.zip" download>Download source (.zip)</a>
+      <a class="btn" href="app.html">Try the app</a>
+      <a class="btn ghost" href="#install">Install on your phone</a>
+      <button id="install" class="btn ghost" hidden>Install from this browser</button>
     </div>
   </section>
 
-  <section class="card">
-    <h2>Install on Android</h2>
-    <ol>
-      <li>Tap <b>Open the app</b> in Chrome.</li>
-      <li>Tap <b>⋮ → Install app</b> (or “Add to Home screen”).</li>
-    </ol>
-    <p class="hint">iPhone: Share → Add to Home Screen. This draft is a web app (PWA), not a Play Store APK.</p>
+  <section class="card" id="install">
+    <h2>Install CareCircle</h2>
+    <p class="hint">Free draft prototype. Pick your device:</p>
+    <div class="install-grid">
+      <div class="inst" id="inst-android">
+        <h3>🤖 Android</h3>
+        <a class="btn big" href="../downloads/CareCircle.apk" download>⬇ Download for Android (APK)</a>
+        <p class="hint">Version 1.0 · 0.4 MB · Android 6.0 or newer</p>
+        <ol>
+          <li>Tap <b>Download</b> and open <b>CareCircle.apk</b> when it finishes.</li>
+          <li>If asked, allow your browser to <b>install unknown apps</b> (one-time setting).</li>
+          <li>Tap <b>Install</b>, then <b>Open</b>. CareCircle appears on your home screen.</li>
+        </ol>
+        <p class="hint">This draft is not on Google Play yet, so Play Protect may show a warning. Installing is safe if you downloaded the file from lousynx.com.</p>
+        <details><summary>Verify the download</summary><p class="hint">SHA-256:<br><code class="sha">302825840f1ed633c230ee662ec865ab84ef75892d3422136010ad2b316373a6</code></p></details>
+      </div>
+      <div class="inst" id="inst-ios">
+        <h3>🍎 iPhone &amp; iPad</h3>
+        <p>Apple doesn't allow apps to be installed from a website, so you add CareCircle to your Home Screen from Safari. It then opens full-screen like any other app.</p>
+        <ol>
+          <li>Open <b>www.lousynx.com/carecircle/app.html</b> in <b>Safari</b>.</li>
+          <li>Tap the <b>Share</b> button (the square with an arrow).</li>
+          <li>Scroll down and tap <b>Add to Home Screen</b>, then <b>Add</b>.</li>
+        </ol>
+        <a class="btn big" href="app.html">Open in Safari to install</a>
+        <p class="hint">On iPhone, some features (background notifications, voice input) are limited by iOS.</p>
+      </div>
+    </div>
+    <div class="qr"><img src="qr.svg" width="132" height="132" alt="QR code that opens this page"><p><b>On a computer?</b> Scan this code with your phone's camera to open this page there.</p></div>
   </section>
 
   <section class="card">
@@ -51,13 +78,14 @@
     <ul>
       <li>Prototype only. Accounts, requests and profiles stay on your device (passwords are stored only as salted hashes), other people on the map are simulated, and no payments exist.</li>
       <li>Not an emergency, medical or personal-care service. In an emergency, call your local emergency number.</li>
-      <li>A real launch needs a backend, helper identity and background checks, privacy compliance and payments through a licensed provider. See the design notes in the source download (BACKEND.md).</li>
+      <li>A real launch needs a backend, helper identity and background checks, privacy compliance and payments through a licensed provider.</li>
       <li>Not legal advice. Rules for in-home visits and vulnerable people differ by region.</li>
     </ul>
   </section>
   <p class="hint" style="text-align:center"><a href="../">← Back to lousynx.com</a></p>
 </main>
 <script>
+document.body.dataset.os=/android/i.test(navigator.userAgent)?"android":(/iphone|ipad|ipod/i.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1))?"ios":"other";
 let d;addEventListener('beforeinstallprompt',e=>{e.preventDefault();d=e;const b=document.getElementById('install');b.hidden=false;b.onclick=async()=>{d.prompt();await d.userChoice;b.hidden=true}});
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
 </script>

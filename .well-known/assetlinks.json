@@ -1,0 +1,38 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.lousynx.guildpool",
+      "sha256_cert_fingerprints": [
+        "88:BE:5E:BC:4A:C4:B4:41:65:08:CE:16:6F:F1:29:6E:DF:A6:A1:43:27:49:AA:8D:1F:38:BB:51:E8:3E:E7:AC"
+      ]
+    }
+  },
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.lousynx.carecircle",
+      "sha256_cert_fingerprints": [
+        "88:BE:5E:BC:4A:C4:B4:41:65:08:CE:16:6F:F1:29:6E:DF:A6:A1:43:27:49:AA:8D:1F:38:BB:51:E8:3E:E7:AC"
+      ]
+    }
+  },
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.lousynx.wayly",
+      "sha256_cert_fingerprints": [
+        "88:BE:5E:BC:4A:C4:B4:41:65:08:CE:16:6F:F1:29:6E:DF:A6:A1:43:27:49:AA:8D:1F:38:BB:51:E8:3E:E7:AC"
+      ]
+    }
+  }
+]

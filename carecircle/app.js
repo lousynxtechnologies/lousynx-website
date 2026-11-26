@@ -1,6 +1,6 @@
 /* CareCircle — DRAFT prototype. Single-device demo: data is stored locally in this browser.
    Accounts here are LOCAL to this device (salted PBKDF2 hashes, never plain text) — real sign-in
-   must be done by a server (see BACKEND.md). Other people on the map are SIMULATED. */
+   must be done by a server. Other people on the map are SIMULATED. */
 (() => {
   'use strict';
   const KEY = 'carecircle.v1';

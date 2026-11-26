@@ -354,7 +354,7 @@
       ${voices.length ? `<label>Voice<select id="voiceSel"><option value="">Automatic (English)</option>${voices.map(x => `<option value="${esc(x.voiceURI)}" ${x.voiceURI === v.uri ? 'selected' : ''}>${esc(x.name)} (${esc(x.lang)})</option>`).join('')}</select></label>` : `<p class="hint">${synth ? 'No voices reported yet by this browser.' : 'This browser does not support speech synthesis.'}</p>`}
       <button class="btn ghost" data-act="testvoice">▶ Test voice</button></section>
     <section class="card"><h2>🔔 Notifications</h2>
-      <p class="hint">Status: <b>${esc(perm)}</b>. Reminders appear in the app and are spoken. With notifications on, they also pop up while the app is open. Reminders while the app is closed need a server (see BACKEND.md).</p>
+      <p class="hint">Status: <b>${esc(perm)}</b>. Reminders appear in the app and are spoken. With notifications on, they also pop up while the app is open. Reminders while the app is closed need a server.</p>
       <button class="btn ghost" data-act="notif" ${perm === 'unsupported' ? 'disabled' : ''}>${state.notif && perm === 'granted' ? 'Notifications on' : 'Turn on notifications'}</button></section>
     <section class="card"><h2>🔒 Privacy</h2><ul class="hint"><li>Your trip stays on this device. Nothing is sent to a server.</li><li>Location is used only when you tap “Show nearby sights”, and isn't stored.</li><li>Voice input (microphone button) uses your browser's speech service, which may send audio to its provider.</li></ul></section>
     <section class="card"><h2>About this draft</h2><ul>
